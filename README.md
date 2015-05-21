@@ -4,15 +4,15 @@
 
 Talking to the Youtube API requires oauth2 authentication. As such, you must:
 
-- Create an account on the Google Developers Console
-- Register a new app there
-- Enable the Youtube API (APIs & Auth -> APIs)
-- Create Client ID (APIs & Auth -> Credentials), select 'Web application'
-- Take note of the `Client ID` and `Client secret` values
+1. Create an account on the Google Developers Console
+1. Register a new app there
+1. Enable the Youtube API (APIs & Auth -> APIs)
+1. Create Client ID (APIs & Auth -> Credentials), select 'Web application'
+1. Take note of the `Client ID` and `Client secret` values
 
 ## Usage
 
-First create `client_secret.json` file that looks like this:
+The utility looks for `client_secret.json` in the local directory. Create it first using the details from above:
 
 ```
 {
@@ -28,7 +28,7 @@ First create `client_secret.json` file that looks like this:
 
 Update `client_id` and `client_secret` to match your details
 
-Run the utility, pointing it to a local video file:
+Run the utility like so:
 
 ```
 ./youtubeuploader -filename test.mp4
