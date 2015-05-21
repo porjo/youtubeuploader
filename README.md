@@ -1,4 +1,18 @@
-Needs `client_secret.json` file that looks something like:
+# Youtube Uploader
+
+## Youtube API
+
+Talking to the Youtube API requires oauth2 authentication. As such, you must:
+
+- Create an account on the Google Developers Console
+- Register a new app there
+- Enable the Youtube API (APIs & Auth -> APIs)
+- Create Client ID (APIs & Auth -> Credentials), select 'Web application'
+- Take note of the `Client ID` and `Client secret` values
+
+## Usage
+
+First create `client_secret.json` file that looks like this:
 
 ```
 {
@@ -12,6 +26,10 @@ Needs `client_secret.json` file that looks something like:
 }
 ```
 
-## Usage
+Update `client_id` and `client_secret` to match your details
 
-./youtubeuploader -filename $file -title "$title" -description "$description" -category $category
+Run the utility, pointing it to a local video file:
+
+```
+./youtubeuploader -filename test.mp4
+```
