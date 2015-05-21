@@ -14,7 +14,8 @@ Talking to the Youtube API requires oauth2 authentication. As such, you must:
 
 ### Build
 
-`go get github.com/porjo/youtubeuploader`
+- Install Go e.g. `yum install golang`
+- `go get github.com/porjo/youtubeuploader`
 
 ### Setup
 
