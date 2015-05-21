@@ -12,6 +12,12 @@ Talking to the Youtube API requires oauth2 authentication. As such, you must:
 
 ## Usage
 
+### Build
+
+`go get github.com/porjo/youtubeuploader`
+
+### Setup
+
 The utility looks for `client_secret.json` in the local directory. Create it first using the details from above:
 
 ```
@@ -28,7 +34,7 @@ The utility looks for `client_secret.json` in the local directory. Create it fir
 
 Update `client_id` and `client_secret` to match your details
 
-Run the utility like so:
+### Run
 
 ```
 ./youtubeuploader -filename test.mp4
