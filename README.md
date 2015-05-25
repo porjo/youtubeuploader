@@ -40,3 +40,7 @@ Update `client_id` and `client_secret` to match your details
 ```
 ./youtubeuploader -filename test.mp4
 ```
+
+### Credit
+
+Based on [Go Youtube API Sample code](https://github.com/youtube/api-samples/tree/master/go)
