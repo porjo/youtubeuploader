@@ -1,5 +1,7 @@
 # Youtube Uploader
 
+Scripted uploads to youtube. Files can be uploaded from local disk or from the web.
+
 ## Youtube API
 
 Talking to the Youtube API requires oauth2 authentication. As such, you must:
@@ -35,11 +37,31 @@ The utility looks for `client_secret.json` in the local directory. Create it fir
 
 Update `client_id` and `client_secret` to match your details
 
-### Run
+### Usage
+
+At a minimum, just specify a filename:
 
 ```
-./youtubeuploader -filename test.mp4
+./youtubeuploader -filename blob.mp4
 ```
+
+If it is the first time you've run the utility, a browser window should popup and prompt you to provide Youtube credentials. A token will be created and stored in `request.token` file in the local directory for subsequent use. To run the utility on a headless-server, generate the token file locally first, then simply copy the token file along with `youtubeuploader` and `client_secret.json` to the remote host.
+
+Full list of options:
+```
+$ ./youtubeuploader --help
+Usage of ./youtubeuploader:
+  -cache="request.token": Token cache file
+  -category="22": Video category
+  -description="Test Description": Video description
+  -filename="": Filename to upload. Can be a URL
+  -keywords="": Comma separated list of video keywords
+  -privacy="unlisted": Video privacy status
+  -progress=true: Show progress indicator
+  -secrets="client_secrets.json": Client Secrets configuration
+  -title="Test Title": Video title
+```
+*NOTE:* When specifying a URL as the filename, the data will be streamed through the localhost (download from remote host, then upload to Youtube)
 
 ### Credit
 

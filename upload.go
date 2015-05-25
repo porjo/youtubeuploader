@@ -15,7 +15,6 @@ limitations under the License.
 package main
 
 import (
-	"bufio"
 	"flag"
 	"fmt"
 	"io"
@@ -23,18 +22,30 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"google.golang.org/api/youtube/v3"
 )
 
 var (
-	filename    = flag.String("filename", "", "Name of video file to upload")
-	title       = flag.String("title", "Test Title", "Video title")
-	description = flag.String("description", "Test Description", "Video description")
-	category    = flag.String("category", "22", "Video category")
-	keywords    = flag.String("keywords", "", "Comma separated list of video keywords")
-	privacy     = flag.String("privacy", "unlisted", "Video privacy status")
+	filename     = flag.String("filename", "", "Filename to upload. Can be a URL")
+	title        = flag.String("title", "Test Title", "Video title")
+	description  = flag.String("description", "Test Description", "Video description")
+	category     = flag.String("category", "22", "Video category")
+	keywords     = flag.String("keywords", "", "Comma separated list of video keywords")
+	privacy      = flag.String("privacy", "unlisted", "Video privacy status")
+	showProgress = flag.Bool("progress", true, "Show progress indicator")
 )
+
+type customReader struct {
+	Body io.ReadCloser
+	// function called periodically with average Bps (bytes per second) and total bytes read
+	Progress func(Bps int, total int)
+
+	totalBytes int
+	lapTime    time.Time
+	startTime  time.Time
+}
 
 func main() {
 	flag.Parse()
@@ -75,8 +86,12 @@ func main() {
 		if err != nil {
 			log.Fatalf("Error opening %v: %v", *filename, err)
 		}
-		defer resp.Body.Close()
-		reader = bufio.NewReader(resp.Body)
+		cr := &customReader{}
+		cr.Body = resp.Body
+		if *showProgress {
+			cr.Progress = progress
+		}
+		reader = cr
 	} else {
 		file, err := os.Open(*filename)
 		defer file.Close()
@@ -90,5 +105,32 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error making YouTube API call: %v", err)
 	}
-	fmt.Printf("Upload successful! Video ID: %v\n", response.Id)
+	fmt.Printf("\nUpload successful! Video ID: %v\n", response.Id)
+}
+
+func progress(Bps int, total int) {
+	fmt.Printf("\rTransfer rate %.2f Mbps, total %d", float32(Bps*8)/(1000*1000), total)
+}
+
+func (r *customReader) Read(p []byte) (n int, err error) {
+	if r.startTime.IsZero() {
+		r.startTime = time.Now()
+	}
+	if r.lapTime.IsZero() {
+		r.lapTime = time.Now()
+	}
+	if len(p) == 0 {
+		return 0, nil
+	}
+	n, err = r.Body.Read(p)
+	r.totalBytes += n
+
+	if time.Since(r.lapTime) >= time.Second || err == io.EOF {
+		if r.Progress != nil {
+			r.Progress(r.totalBytes/int(time.Since(r.startTime).Seconds()), r.totalBytes)
+		}
+		r.lapTime = time.Now()
+	}
+
+	return n, err
 }
