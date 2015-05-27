@@ -38,7 +38,7 @@ var (
 )
 
 type customReader struct {
-	Body io.ReadCloser
+	ReadCloser io.ReadCloser
 	// function called periodically with average Bps (bytes per second) and total bytes read
 	Progress func(Bps int, total int)
 
@@ -80,25 +80,24 @@ func main() {
 
 	call := service.Videos.Insert("snippet,status", upload)
 
-	var reader io.Reader
+	reader := &customReader{}
+	if *showProgress {
+		reader.Progress = progress
+	}
+
 	if strings.HasPrefix(*filename, "http") {
 		resp, err := http.Get(*filename)
 		if err != nil {
 			log.Fatalf("Error opening %v: %v", *filename, err)
 		}
-		cr := &customReader{}
-		cr.Body = resp.Body
-		if *showProgress {
-			cr.Progress = progress
-		}
-		reader = cr
+		reader.ReadCloser = resp.Body
 	} else {
 		file, err := os.Open(*filename)
 		defer file.Close()
 		if err != nil {
 			log.Fatalf("Error opening %v: %v", *filename, err)
 		}
-		reader = file
+		reader.ReadCloser = file
 	}
 
 	response, err := call.Media(reader).Do()
@@ -122,7 +121,7 @@ func (r *customReader) Read(p []byte) (n int, err error) {
 	if len(p) == 0 {
 		return 0, nil
 	}
-	n, err = r.Body.Read(p)
+	n, err = r.ReadCloser.Read(p)
 	r.totalBytes += n
 
 	if time.Since(r.lapTime) >= time.Second || err == io.EOF {
