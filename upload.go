@@ -21,6 +21,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -43,7 +44,7 @@ type customReader struct {
 	bytes     int64
 	lapTime   time.Time
 	startTime time.Time
-	fileInfo  os.FileInfo
+	fileSize  int64
 }
 
 func main() {
@@ -82,7 +83,19 @@ func main() {
 	reader := &customReader{}
 
 	if strings.HasPrefix(*filename, "http") {
-		resp, err := http.Get(*filename)
+		resp, err := http.Head(*filename)
+		if err != nil {
+			log.Fatalf("Error opening %v: %v", *filename, err)
+		}
+		lenStr := resp.Header.Get("content-length")
+		if lenStr != "" {
+			reader.fileSize, err = strconv.ParseInt(lenStr, 10, 64)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+
+		resp, err = http.Get(*filename)
 		if err != nil {
 			log.Fatalf("Error opening %v: %v", *filename, err)
 		}
@@ -93,10 +106,11 @@ func main() {
 		if err != nil {
 			log.Fatalf("Error opening %v: %v", *filename, err)
 		}
-		reader.fileInfo, err = file.Stat()
+		fileInfo, err := file.Stat()
 		if err != nil {
 			log.Fatalf("Error stating file %v: %v", *filename, err)
 		}
+		reader.fileSize = fileInfo.Size()
 		reader.ReadCloser = file
 	}
 
@@ -108,9 +122,8 @@ func main() {
 }
 
 func (r *customReader) progress(Bps int64) {
-	if r.fileInfo != nil {
-		totalBytes := r.fileInfo.Size()
-		fmt.Printf("\rTransfer rate %.2f Mbps, %d / %d (%.2f%%)", float32(Bps*8)/(1000*1000), r.bytes, totalBytes, float32(r.bytes)/float32(totalBytes)*100)
+	if r.fileSize > 0 {
+		fmt.Printf("\rTransfer rate %.2f Mbps, %d / %d (%.2f%%)", float32(Bps*8)/(1000*1000), r.bytes, r.fileSize, float32(r.bytes)/float32(r.fileSize)*100)
 	} else {
 		fmt.Printf("\rTransfer rate %.2f Mbps, %d", float32(Bps*8)/(1000*1000), r.bytes)
 	}
