@@ -39,12 +39,11 @@ var (
 
 type customReader struct {
 	ReadCloser io.ReadCloser
-	// function called periodically with average Bps (bytes per second) and total bytes read
-	Progress func(Bps int, total int)
 
-	totalBytes int
-	lapTime    time.Time
-	startTime  time.Time
+	bytes     int64
+	lapTime   time.Time
+	startTime time.Time
+	fileInfo  os.FileInfo
 }
 
 func main() {
@@ -81,9 +80,6 @@ func main() {
 	call := service.Videos.Insert("snippet,status", upload)
 
 	reader := &customReader{}
-	if *showProgress {
-		reader.Progress = progress
-	}
 
 	if strings.HasPrefix(*filename, "http") {
 		resp, err := http.Get(*filename)
@@ -97,6 +93,10 @@ func main() {
 		if err != nil {
 			log.Fatalf("Error opening %v: %v", *filename, err)
 		}
+		reader.fileInfo, err = file.Stat()
+		if err != nil {
+			log.Fatalf("Error stating file %v: %v", *filename, err)
+		}
 		reader.ReadCloser = file
 	}
 
@@ -107,8 +107,13 @@ func main() {
 	fmt.Printf("\nUpload successful! Video ID: %v\n", response.Id)
 }
 
-func progress(Bps int, total int) {
-	fmt.Printf("\rTransfer rate %.2f Mbps, total %d", float32(Bps*8)/(1000*1000), total)
+func (r *customReader) progress(Bps int64) {
+	if r.fileInfo != nil {
+		totalBytes := r.fileInfo.Size()
+		fmt.Printf("\rTransfer rate %.2f Mbps, %d / %d (%.2f%%)", float32(Bps*8)/(1000*1000), r.bytes, totalBytes, float32(r.bytes)/float32(totalBytes)*100)
+	} else {
+		fmt.Printf("\rTransfer rate %.2f Mbps, %d", float32(Bps*8)/(1000*1000), r.bytes)
+	}
 }
 
 func (r *customReader) Read(p []byte) (n int, err error) {
@@ -122,12 +127,10 @@ func (r *customReader) Read(p []byte) (n int, err error) {
 		return 0, nil
 	}
 	n, err = r.ReadCloser.Read(p)
-	r.totalBytes += n
+	r.bytes += int64(n)
 
 	if time.Since(r.lapTime) >= time.Second || err == io.EOF {
-		if r.Progress != nil {
-			r.Progress(r.totalBytes/int(time.Since(r.startTime).Seconds()), r.totalBytes)
-		}
+		r.progress(r.bytes / int64(time.Since(r.startTime).Seconds()))
 		r.lapTime = time.Now()
 	}
 
