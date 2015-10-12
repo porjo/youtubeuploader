@@ -123,7 +123,8 @@ func main() {
 
 func (r *customReader) progress(Bps int64) {
 	if r.fileSize > 0 {
-		fmt.Printf("\rTransfer rate %.2f Mbps, %d / %d (%.2f%%)", float32(Bps*8)/(1000*1000), r.bytes, r.fileSize, float32(r.bytes)/float32(r.fileSize)*100)
+		eta := time.Duration((r.fileSize-r.bytes)/Bps) * time.Second
+		fmt.Printf("\rTransfer rate %.2f Mbps, %d / %d (%.2f%%) ETA %s", float32(Bps*8)/(1000*1000), r.bytes, r.fileSize, float32(r.bytes)/float32(r.fileSize)*100, eta)
 	} else {
 		fmt.Printf("\rTransfer rate %.2f Mbps, %d", float32(Bps*8)/(1000*1000), r.bytes)
 	}
