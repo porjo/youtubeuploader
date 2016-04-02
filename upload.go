@@ -144,7 +144,12 @@ func (r *customReader) Read(p []byte) (n int, err error) {
 	r.bytes += int64(n)
 
 	if time.Since(r.lapTime) >= time.Second || err == io.EOF {
-		r.progress(r.bytes / int64(time.Since(r.startTime).Seconds()))
+		timeSince := int64(time.Since(r.startTime).Seconds())
+		if timeSince == 0 {
+			r.progress(r.bytes)
+		} else {
+			r.progress(r.bytes / timeSince)
+		}
 		r.lapTime = time.Now()
 	}
 

@@ -21,7 +21,7 @@ Talking to the Youtube API requires oauth2 authentication. As such, you must:
 
 ### Setup
 
-The utility looks for `client_secret.json` in the local directory. Create it first using the details from above:
+The utility looks for `client_secrets.json` in the local directory. Create it first using the details from above:
 
 ```
 {
@@ -45,7 +45,7 @@ At a minimum, just specify a filename:
 ./youtubeuploader -filename blob.mp4
 ```
 
-If it is the first time you've run the utility, a browser window should popup and prompt you to provide Youtube credentials. A token will be created and stored in `request.token` file in the local directory for subsequent use. To run the utility on a headless-server, generate the token file locally first, then simply copy the token file along with `youtubeuploader` and `client_secret.json` to the remote host.
+If it is the first time you've run the utility, a browser window should popup and prompt you to provide Youtube credentials. A token will be created and stored in `request.token` file in the local directory for subsequent use. To run the utility on a headless-server, generate the token file locally first, then simply copy the token file along with `youtubeuploader` and `client_secrets.json` to the remote host.
 
 Full list of options:
 ```
