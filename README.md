@@ -6,10 +6,11 @@ Scripted uploads to youtube. Files can be uploaded from local disk or from the w
 
 Talking to the Youtube API requires oauth2 authentication. As such, you must:
 
-1. Create an account on the Google Developers Console
+1. Create an account on the [Google Developers Console](https://console.developers.google.com)
 1. Register a new app there
 1. Enable the Youtube API (APIs & Auth -> APIs)
 1. Create Client ID (APIs & Auth -> Credentials), select 'Web application'
+1. Add an 'Authorized redirect URI' of 'http://localhost:8080/oauth2callback'
 1. Take note of the `Client ID` and `Client secret` values
 
 ## Usage
