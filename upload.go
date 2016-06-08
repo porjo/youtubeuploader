@@ -25,6 +25,7 @@ import (
 	"strings"
 	"time"
 
+	"google.golang.org/api/googleapi"
 	"google.golang.org/api/youtube/v3"
 )
 
@@ -34,7 +35,7 @@ var (
 	description  = flag.String("description", "Test Description", "Video description")
 	category     = flag.String("category", "22", "Video category")
 	keywords     = flag.String("keywords", "", "Comma separated list of video keywords")
-	privacy      = flag.String("privacy", "unlisted", "Video privacy status")
+	privacy      = flag.String("privacy", "private", "Video privacy status")
 	showProgress = flag.Bool("progress", true, "Show progress indicator")
 )
 
@@ -114,7 +115,9 @@ func main() {
 		reader.ReadCloser = file
 	}
 
-	response, err := call.Media(reader).Do()
+	// set minimum chunk size so we can see progress
+	options := googleapi.ChunkSize(1)
+	response, err := call.Media(reader, options).Do()
 	if err != nil {
 		log.Fatalf("Error making YouTube API call: %v", err)
 	}
