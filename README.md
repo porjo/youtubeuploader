@@ -1,6 +1,9 @@
 # Youtube Uploader
 
-Scripted uploads to youtube. Files can be uploaded from local disk or from the web.
+Scripted uploads to youtube.
+
+- upload video files from local disk or from the web.
+- ratelimit upload bandwidth
 
 ## Youtube API
 

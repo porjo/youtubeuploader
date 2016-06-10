@@ -25,6 +25,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/juju/ratelimit"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/youtube/v3"
 )
@@ -37,10 +38,11 @@ var (
 	keywords     = flag.String("keywords", "", "Comma separated list of video keywords")
 	privacy      = flag.String("privacy", "private", "Video privacy status")
 	showProgress = flag.Bool("progress", true, "Show progress indicator")
+	rate         = flag.Int("ratelimit", 0, "Rate limit upload in KB/s. No limit by default")
 )
 
 type customReader struct {
-	ReadCloser io.ReadCloser
+	Reader io.Reader
 
 	bytes     int64
 	lapTime   time.Time
@@ -82,6 +84,13 @@ func main() {
 	call := service.Videos.Insert("snippet,status", upload)
 
 	reader := &customReader{}
+	var lreader io.Reader
+
+	if *rate > 0 {
+		// Bucket adding rate KB every second, holding max 100KB
+		bucket := ratelimit.NewBucketWithRate(float64(*rate)*1024, 100*1024)
+		lreader = ratelimit.Reader(reader, bucket)
+	}
 
 	if strings.HasPrefix(*filename, "http") {
 		resp, err := http.Head(*filename)
@@ -100,10 +109,10 @@ func main() {
 		if err != nil {
 			log.Fatalf("Error opening %v: %v", *filename, err)
 		}
-		reader.ReadCloser = resp.Body
+		reader.Reader = resp.Body
+		defer resp.Body.Close()
 	} else {
 		file, err := os.Open(*filename)
-		defer file.Close()
 		if err != nil {
 			log.Fatalf("Error opening %v: %v", *filename, err)
 		}
@@ -112,16 +121,22 @@ func main() {
 			log.Fatalf("Error stating file %v: %v", *filename, err)
 		}
 		reader.fileSize = fileInfo.Size()
-		reader.ReadCloser = file
+		reader.Reader = file
+		defer file.Close()
 	}
 
 	// set minimum chunk size so we can see progress
 	options := googleapi.ChunkSize(1)
-	response, err := call.Media(reader, options).Do()
+	var video *youtube.Video
+	if lreader != nil {
+		video, err = call.Media(lreader, options).Do()
+	} else {
+		video, err = call.Media(reader, options).Do()
+	}
 	if err != nil {
 		log.Fatalf("Error making YouTube API call: %v", err)
 	}
-	fmt.Printf("\nUpload successful! Video ID: %v\n", response.Id)
+	fmt.Printf("\nUpload successful! Video ID: %v\n", video.Id)
 }
 
 func (r *customReader) progress(Bps int64) {
@@ -143,7 +158,7 @@ func (r *customReader) Read(p []byte) (n int, err error) {
 	if len(p) == 0 {
 		return 0, nil
 	}
-	n, err = r.ReadCloser.Read(p)
+	n, err = r.Reader.Read(p)
 	r.bytes += int64(n)
 
 	if time.Since(r.lapTime) >= time.Second || err == io.EOF {
