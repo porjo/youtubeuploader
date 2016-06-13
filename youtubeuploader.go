@@ -32,9 +32,9 @@ import (
 
 var (
 	filename     = flag.String("filename", "", "Filename to upload. Can be a URL")
-	title        = flag.String("title", "Test Title", "Video title")
-	description  = flag.String("description", "Test Description", "Video description")
-	category     = flag.String("category", "22", "Video category")
+	title        = flag.String("title", "Video Title", "Video title")
+	description  = flag.String("description", "uploaded by youtubeuploader", "Video description")
+	category     = flag.String("category", "", "Video category")
 	keywords     = flag.String("keywords", "", "Comma separated list of video keywords")
 	privacy      = flag.String("privacy", "private", "Video privacy status")
 	showProgress = flag.Bool("progress", true, "Show progress indicator")
@@ -110,6 +110,7 @@ func main() {
 			log.Fatalf("Error opening %v: %v", *filename, err)
 		}
 		reader.Reader = resp.Body
+		reader.fileSize = resp.ContentLength
 		defer resp.Body.Close()
 	} else {
 		file, err := os.Open(*filename)
@@ -125,16 +126,28 @@ func main() {
 		defer file.Close()
 	}
 
-	// set minimum chunk size so we can see progress
-	options := googleapi.ChunkSize(1)
+	var option googleapi.MediaOption
+	if reader.fileSize < (1024 * 1024 * 10) {
+		// on small uploads (<10MB), set minimum chunk size so we can see progress
+		option = googleapi.ChunkSize(1)
+	} else {
+		// on larger uploads, use the default chunk size for best performance
+		option = googleapi.ChunkSize(googleapi.DefaultUploadChunkSize)
+	}
+
 	var video *youtube.Video
 	if lreader != nil {
-		video, err = call.Media(lreader, options).Do()
+		// rate-limited reader
+		video, err = call.Media(lreader, option).Do()
 	} else {
-		video, err = call.Media(reader, options).Do()
+		video, err = call.Media(reader, option).Do()
 	}
 	if err != nil {
-		log.Fatalf("Error making YouTube API call: %v", err)
+		if video != nil {
+			log.Fatalf("Error making YouTube API call: %v, %v", err, video.HTTPStatusCode)
+		} else {
+			log.Fatalf("Error making YouTube API call: %v", err)
+		}
 	}
 	fmt.Printf("\nUpload successful! Video ID: %v\n", video.Id)
 }
