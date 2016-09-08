@@ -25,7 +25,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/juju/ratelimit"
+	"github.com/mxk/go-flowrate/flowrate"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/youtube/v3"
 )
@@ -47,7 +47,7 @@ type customReader struct {
 	bytes     int64
 	lapTime   time.Time
 	startTime time.Time
-	fileSize  int64
+	filesize  int64
 }
 
 func main() {
@@ -57,10 +57,59 @@ func main() {
 		log.Fatalf("You must provide a filename of a video file to upload")
 	}
 
+	var reader io.Reader
+	var filesize int64
+
+	if strings.HasPrefix(*filename, "http") {
+		resp, err := http.Head(*filename)
+		if err != nil {
+			log.Fatalf("Error opening %v: %v", *filename, err)
+		}
+		lenStr := resp.Header.Get("content-length")
+		if lenStr != "" {
+			filesize, err = strconv.ParseInt(lenStr, 10, 64)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+
+		resp, err = http.Get(*filename)
+		if err != nil {
+			log.Fatalf("Error opening %v: %v", *filename, err)
+		}
+		reader = resp.Body
+		filesize = resp.ContentLength
+		defer resp.Body.Close()
+	} else {
+		file, err := os.Open(*filename)
+		if err != nil {
+			log.Fatalf("Error opening %v: %v", *filename, err)
+		}
+		fileInfo, err := file.Stat()
+		if err != nil {
+			log.Fatalf("Error stating file %v: %v", *filename, err)
+		}
+		filesize = fileInfo.Size()
+		reader = file
+		defer file.Close()
+	}
+
+	var option googleapi.MediaOption
+	if filesize < (1024 * 1024 * 10) {
+		// on small uploads (<10MB), set minimum chunk size so we can see progress
+		option = googleapi.ChunkSize(1)
+	} else {
+		// on larger uploads, use the default chunk size for best performance
+		option = googleapi.ChunkSize(googleapi.DefaultUploadChunkSize)
+	}
+
+	transport := limitTransport{}
+	transport.filesize = filesize
 	client, err := buildOAuthHTTPClient(youtube.YoutubeUploadScope)
 	if err != nil {
 		log.Fatalf("Error building OAuth client: %v", err)
 	}
+	client.Transport = transport
 
 	service, err := youtube.New(client)
 	if err != nil {
@@ -83,65 +132,8 @@ func main() {
 
 	call := service.Videos.Insert("snippet,status", upload)
 
-	reader := &customReader{}
-	var lreader io.Reader
-
-	if *rate > 0 {
-		// Bucket adding rate KB every second, holding max 100KB
-		bucket := ratelimit.NewBucketWithRate(float64(*rate)*1024, 100*1024)
-		lreader = ratelimit.Reader(reader, bucket)
-	}
-
-	if strings.HasPrefix(*filename, "http") {
-		resp, err := http.Head(*filename)
-		if err != nil {
-			log.Fatalf("Error opening %v: %v", *filename, err)
-		}
-		lenStr := resp.Header.Get("content-length")
-		if lenStr != "" {
-			reader.fileSize, err = strconv.ParseInt(lenStr, 10, 64)
-			if err != nil {
-				log.Fatal(err)
-			}
-		}
-
-		resp, err = http.Get(*filename)
-		if err != nil {
-			log.Fatalf("Error opening %v: %v", *filename, err)
-		}
-		reader.Reader = resp.Body
-		reader.fileSize = resp.ContentLength
-		defer resp.Body.Close()
-	} else {
-		file, err := os.Open(*filename)
-		if err != nil {
-			log.Fatalf("Error opening %v: %v", *filename, err)
-		}
-		fileInfo, err := file.Stat()
-		if err != nil {
-			log.Fatalf("Error stating file %v: %v", *filename, err)
-		}
-		reader.fileSize = fileInfo.Size()
-		reader.Reader = file
-		defer file.Close()
-	}
-
-	var option googleapi.MediaOption
-	if reader.fileSize < (1024 * 1024 * 10) {
-		// on small uploads (<10MB), set minimum chunk size so we can see progress
-		option = googleapi.ChunkSize(1)
-	} else {
-		// on larger uploads, use the default chunk size for best performance
-		option = googleapi.ChunkSize(googleapi.DefaultUploadChunkSize)
-	}
-
 	var video *youtube.Video
-	if lreader != nil {
-		// rate-limited reader
-		video, err = call.Media(lreader, option).Do()
-	} else {
-		video, err = call.Media(reader, option).Do()
-	}
+	video, err = call.Media(reader, option).Do()
 	if err != nil {
 		if video != nil {
 			log.Fatalf("Error making YouTube API call: %v, %v", err, video.HTTPStatusCode)
@@ -152,37 +144,14 @@ func main() {
 	fmt.Printf("\nUpload successful! Video ID: %v\n", video.Id)
 }
 
-func (r *customReader) progress(Bps int64) {
-	if r.fileSize > 0 {
-		eta := time.Duration((r.fileSize-r.bytes)/Bps) * time.Second
-		fmt.Printf("\rTransfer rate %.2f Mbps, %d / %d (%.2f%%) ETA %s", float32(Bps*8)/(1000*1000), r.bytes, r.fileSize, float32(r.bytes)/float32(r.fileSize)*100, eta)
-	} else {
-		fmt.Printf("\rTransfer rate %.2f Mbps, %d", float32(Bps*8)/(1000*1000), r.bytes)
-	}
+type limitTransport struct {
+	http.RoundTripper
+	filesize int64
 }
 
-func (r *customReader) Read(p []byte) (n int, err error) {
-	if r.startTime.IsZero() {
-		r.startTime = time.Now()
-	}
-	if r.lapTime.IsZero() {
-		r.lapTime = time.Now()
-	}
-	if len(p) == 0 {
-		return 0, nil
-	}
-	n, err = r.Reader.Read(p)
-	r.bytes += int64(n)
-
-	if time.Since(r.lapTime) >= time.Second || err == io.EOF {
-		timeSince := int64(time.Since(r.startTime).Seconds())
-		if timeSince == 0 {
-			r.progress(r.bytes)
-		} else {
-			r.progress(r.bytes / timeSince)
-		}
-		r.lapTime = time.Now()
-	}
-
-	return n, err
+func (t limitTransport) RoundTrip(r *http.Request) (res *http.Response, err error) {
+	body := flowrate.NewReader(r.Body, int64(*rate))
+	body.Monitor.SetTransferSize(t.filesize)
+	r.Body = body
+	return t.RoundTripper.RoundTrip(r)
 }
