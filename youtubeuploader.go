@@ -91,7 +91,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error building OAuth client: %v", err)
 	}
-	transport := limitTransport{client.Transport, 0}
+	transport := &limitTransport{RoundTripper: client.Transport, filesize: 0}
 	transport.filesize = filesize
 	client.Transport = transport
 
@@ -118,7 +118,8 @@ func main() {
 
 	var option googleapi.MediaOption
 	var video *youtube.Video
-	option = googleapi.ChunkSize(googleapi.DefaultUploadChunkSize)
+	//option = googleapi.ChunkSize(googleapi.DefaultUploadChunkSize)
+	option = googleapi.ChunkSize(1000000)
 	video, err = call.Media(reader, option).Do()
 	if err != nil {
 		if video != nil {
@@ -132,17 +133,25 @@ func main() {
 
 type limitTransport struct {
 	http.RoundTripper
+	monitor  *flowrate.Monitor
 	filesize int64
 }
 
-func (t limitTransport) RoundTrip(r *http.Request) (res *http.Response, err error) {
+func (t *limitTransport) RoundTrip(r *http.Request) (res *http.Response, err error) {
 	var body *flowrate.Reader
 	if *rate > 0 {
 		body = flowrate.NewReader(r.Body, int64(*rate*1000))
 	} else {
 		body = flowrate.NewReader(r.Body, -1)
 	}
-	body.Monitor.SetTransferSize(t.filesize)
+	if t.monitor != nil {
+		fmt.Printf("set body monitor\n")
+		body.Monitor = t.monitor
+	} else {
+		fmt.Printf("set transport monitor\n")
+		body.Monitor.SetTransferSize(t.filesize)
+		t.monitor = body.Monitor
+	}
 	r.Body = body
 
 	if *showProgress {
@@ -156,7 +165,7 @@ func (t limitTransport) RoundTrip(r *http.Request) (res *http.Response, err erro
 				select {
 				case <-ticker:
 					s := body.Monitor.Status()
-					fmt.Printf("\rProgress: %.2f Mbps, %d / %d (%s) ETA %s", float32(s.AvgRate)/(1000*1000), s.Bytes, t.filesize, s.Progress, s.TimeRem)
+					fmt.Printf("\rProgress: %.2f Mbps, %d / %d (%s) ETA %s", float32(s.AvgRate*8)/(1000*1000), s.Bytes, t.filesize, s.Progress, s.TimeRem)
 				case <-quitChan:
 					return
 				}
