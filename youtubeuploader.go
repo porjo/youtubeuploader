@@ -23,7 +23,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/mxk/go-flowrate/flowrate"
 	"google.golang.org/api/googleapi"
@@ -38,23 +37,16 @@ var (
 	keywords     = flag.String("keywords", "", "Comma separated list of video keywords")
 	privacy      = flag.String("privacy", "private", "Video privacy status")
 	showProgress = flag.Bool("progress", true, "Show progress indicator")
-	rate         = flag.Int("ratelimit", 0, "Rate limit upload in KB/s. No limit by default")
+	rate         = flag.Int("ratelimit", 0, "Rate limit upload in kB/s. No limit by default")
 )
-
-type customReader struct {
-	Reader io.Reader
-
-	bytes     int64
-	lapTime   time.Time
-	startTime time.Time
-	filesize  int64
-}
 
 func main() {
 	flag.Parse()
 
 	if *filename == "" {
-		log.Fatalf("You must provide a filename of a video file to upload")
+		fmt.Printf("You must provide a filename of a video file to upload\n")
+		flag.PrintDefaults()
+		os.Exit(1)
 	}
 
 	var reader io.Reader
@@ -94,21 +86,12 @@ func main() {
 		defer file.Close()
 	}
 
-	var option googleapi.MediaOption
-	if filesize < (1024 * 1024 * 10) {
-		// on small uploads (<10MB), set minimum chunk size so we can see progress
-		option = googleapi.ChunkSize(1)
-	} else {
-		// on larger uploads, use the default chunk size for best performance
-		option = googleapi.ChunkSize(googleapi.DefaultUploadChunkSize)
-	}
-
-	transport := limitTransport{}
-	transport.filesize = filesize
 	client, err := buildOAuthHTTPClient(youtube.YoutubeUploadScope)
 	if err != nil {
 		log.Fatalf("Error building OAuth client: %v", err)
 	}
+	transport := limitTransport{client.Transport, 0}
+	transport.filesize = filesize
 	client.Transport = transport
 
 	service, err := youtube.New(client)
@@ -132,7 +115,9 @@ func main() {
 
 	call := service.Videos.Insert("snippet,status", upload)
 
+	var option googleapi.MediaOption
 	var video *youtube.Video
+	option = googleapi.ChunkSize(googleapi.DefaultUploadChunkSize)
 	video, err = call.Media(reader, option).Do()
 	if err != nil {
 		if video != nil {
@@ -150,8 +135,11 @@ type limitTransport struct {
 }
 
 func (t limitTransport) RoundTrip(r *http.Request) (res *http.Response, err error) {
-	body := flowrate.NewReader(r.Body, int64(*rate))
-	body.Monitor.SetTransferSize(t.filesize)
-	r.Body = body
+	if *rate > 0 {
+		body := flowrate.NewReader(r.Body, int64(*rate*1000))
+		body.Monitor.SetTransferSize(t.filesize)
+		r.Body = body
+	}
+
 	return t.RoundTripper.RoundTrip(r)
 }
