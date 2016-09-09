@@ -23,6 +23,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/mxk/go-flowrate/flowrate"
 	"google.golang.org/api/googleapi"
@@ -135,10 +136,32 @@ type limitTransport struct {
 }
 
 func (t limitTransport) RoundTrip(r *http.Request) (res *http.Response, err error) {
+	var body *flowrate.Reader
 	if *rate > 0 {
-		body := flowrate.NewReader(r.Body, int64(*rate*1000))
-		body.Monitor.SetTransferSize(t.filesize)
-		r.Body = body
+		body = flowrate.NewReader(r.Body, int64(*rate*1000))
+	} else {
+		body = flowrate.NewReader(r.Body, -1)
+	}
+	body.Monitor.SetTransferSize(t.filesize)
+	r.Body = body
+
+	if *showProgress {
+		ticker := time.NewTicker(time.Millisecond * 500).C
+		quitChan := make(chan bool)
+		defer func() {
+			quitChan <- true
+		}()
+		go func() {
+			for {
+				select {
+				case <-ticker:
+					s := body.Monitor.Status()
+					fmt.Printf("\rProgress: %.2f Mbps, %d / %d (%s) ETA %s", float32(s.AvgRate)/(1000*1000), s.Bytes, t.filesize, s.Progress, s.TimeRem)
+				case <-quitChan:
+					return
+				}
+			}
+		}()
 	}
 
 	return t.RoundTripper.RoundTrip(r)
