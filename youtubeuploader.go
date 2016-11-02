@@ -145,10 +145,8 @@ func (t *limitTransport) RoundTrip(r *http.Request) (res *http.Response, err err
 		body = flowrate.NewReader(r.Body, -1)
 	}
 	if t.monitor != nil {
-		fmt.Printf("set body monitor\n")
 		body.Monitor = t.monitor
 	} else {
-		fmt.Printf("set transport monitor\n")
 		body.Monitor.SetTransferSize(t.filesize)
 		t.monitor = body.Monitor
 	}
