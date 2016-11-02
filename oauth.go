@@ -119,25 +119,34 @@ func readConfig(scope string) (*oauth2.Config, error) {
 		return nil, err
 	}
 
-	var redirectUri string
+	var oCfg *oauth2.Config
 	if len(cfg.Web.RedirectURIs) > 0 {
-		redirectUri = cfg.Web.RedirectURIs[0]
+		oCfg = &oauth2.Config{
+			ClientID:     cfg.Web.ClientID,
+			ClientSecret: cfg.Web.ClientSecret,
+			Scopes:       []string{scope},
+			Endpoint: oauth2.Endpoint{
+				AuthURL:  cfg.Web.AuthURI,
+				TokenURL: cfg.Web.TokenURI,
+			},
+			RedirectURL: cfg.Web.RedirectURIs[0],
+		}
 	} else if len(cfg.Installed.RedirectURIs) > 0 {
-		redirectUri = cfg.Installed.RedirectURIs[0]
+		oCfg = &oauth2.Config{
+			ClientID:     cfg.Installed.ClientID,
+			ClientSecret: cfg.Installed.ClientSecret,
+			Scopes:       []string{scope},
+			Endpoint: oauth2.Endpoint{
+				AuthURL:  cfg.Installed.AuthURI,
+				TokenURL: cfg.Installed.TokenURI,
+			},
+			RedirectURL: cfg.Installed.RedirectURIs[0],
+		}
 	} else {
 		return nil, errors.New("Must specify a redirect URI in config file or when creating OAuth client")
 	}
 
-	return &oauth2.Config{
-		ClientID:     cfg.Installed.ClientID,
-		ClientSecret: cfg.Installed.ClientSecret,
-		Scopes:       []string{scope},
-		Endpoint: oauth2.Endpoint{
-			AuthURL:  cfg.Installed.AuthURI,
-			TokenURL: cfg.Installed.TokenURI,
-		},
-		RedirectURL: redirectUri,
-	}, nil
+	return oCfg, nil
 }
 
 // startWebServer starts a web server that listens on http://localhost:8080.
