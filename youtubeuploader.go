@@ -131,9 +131,11 @@ func main() {
 		// on small uploads (<10MB), set minimum chunk size so we can see progress
 		option = googleapi.ChunkSize(1)
 	} else {
-		// on larger uploads, use the default chunk size for best performance
+		// on larger uploads, use the default chunk size for best performance (~8MB!)
 		option = googleapi.ChunkSize(googleapi.DefaultUploadChunkSize)
 	}
+
+	fmt.Printf("Uploading file '%s'...\n", *filename)
 
 	var video *youtube.Video
 	if lreader != nil {
