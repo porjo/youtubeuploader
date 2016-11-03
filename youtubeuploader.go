@@ -31,14 +31,14 @@ import (
 )
 
 var (
-	filename     = flag.String("filename", "", "Filename to upload. Can be a URL")
-	title        = flag.String("title", "Video Title", "Video title")
-	description  = flag.String("description", "uploaded by youtubeuploader", "Video description")
-	category     = flag.String("category", "", "Video category")
-	keywords     = flag.String("keywords", "", "Comma separated list of video keywords")
-	privacy      = flag.String("privacy", "private", "Video privacy status")
-	showProgress = flag.Bool("progress", true, "Show progress indicator")
-	rate         = flag.Int("ratelimit", 0, "Rate limit upload in KB/s. No limit by default")
+	filename    = flag.String("filename", "", "Filename to upload. Can be a URL")
+	title       = flag.String("title", "Video Title", "Video title")
+	description = flag.String("description", "uploaded by youtubeuploader", "Video description")
+	category    = flag.String("category", "", "Video category")
+	keywords    = flag.String("keywords", "", "Comma separated list of video keywords")
+	privacy     = flag.String("privacy", "private", "Video privacy status")
+	rate        = flag.Int("ratelimit", 0, "Rate limit upload in KB/s. No limit by default")
+	debug       = flag.Bool("debug", false, "Show debug output")
 )
 
 type customReader struct {

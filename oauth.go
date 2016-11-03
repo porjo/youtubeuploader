@@ -28,6 +28,7 @@ import (
 	"runtime"
 	"time"
 
+	"golang.org/x/net/context"
 	"golang.org/x/oauth2"
 )
 
@@ -229,7 +230,13 @@ func buildOAuthHTTPClient(scope string) (*http.Client, error) {
 		}
 	}
 
-	return config.Client(oauth2.NoContext, token), nil
+	ctx := context.Background()
+	if *debug {
+		ctx = context.WithValue(ctx, oauth2.HTTPClient, &http.Client{
+			Transport: &logTransport{http.DefaultTransport},
+		})
+	}
+	return config.Client(ctx, token), nil
 }
 
 // Token retreives the token from the token cache
