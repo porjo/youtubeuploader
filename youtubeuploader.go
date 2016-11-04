@@ -21,11 +21,8 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
-	"time"
 
-	"github.com/juju/ratelimit"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/youtube/v3"
 )
@@ -37,18 +34,8 @@ var (
 	category    = flag.String("category", "", "Video category")
 	keywords    = flag.String("keywords", "", "Comma separated list of video keywords")
 	privacy     = flag.String("privacy", "private", "Video privacy status")
-	rate        = flag.Int("ratelimit", 0, "Rate limit upload in KB/s. No limit by default")
 	debug       = flag.Bool("debug", false, "Show debug output")
 )
-
-type customReader struct {
-	Reader io.Reader
-
-	bytes     int64
-	lapTime   time.Time
-	startTime time.Time
-	fileSize  int64
-}
 
 func main() {
 	flag.Parse()
@@ -83,67 +70,34 @@ func main() {
 
 	call := service.Videos.Insert("snippet,status", upload)
 
-	reader := &customReader{}
-	var lreader io.Reader
-
-	if *rate > 0 {
-		// Bucket adding rate KB every second, holding max 100KB
-		bucket := ratelimit.NewBucketWithRate(float64(*rate)*1024, 100*1024)
-		lreader = ratelimit.Reader(reader, bucket)
-	}
-
+	var reader io.Reader
 	if strings.HasPrefix(*filename, "http") {
 		resp, err := http.Head(*filename)
 		if err != nil {
 			log.Fatalf("Error opening %v: %v", *filename, err)
-		}
-		lenStr := resp.Header.Get("content-length")
-		if lenStr != "" {
-			reader.fileSize, err = strconv.ParseInt(lenStr, 10, 64)
-			if err != nil {
-				log.Fatal(err)
-			}
 		}
 
 		resp, err = http.Get(*filename)
 		if err != nil {
 			log.Fatalf("Error opening %v: %v", *filename, err)
 		}
-		reader.Reader = resp.Body
-		reader.fileSize = resp.ContentLength
+		reader = resp.Body
 		defer resp.Body.Close()
 	} else {
 		file, err := os.Open(*filename)
 		if err != nil {
 			log.Fatalf("Error opening %v: %v", *filename, err)
 		}
-		fileInfo, err := file.Stat()
-		if err != nil {
-			log.Fatalf("Error stating file %v: %v", *filename, err)
-		}
-		reader.fileSize = fileInfo.Size()
-		reader.Reader = file
+		reader = file
 		defer file.Close()
 	}
 
-	var option googleapi.MediaOption
-	if reader.fileSize < (1024 * 1024 * 10) {
-		// on small uploads (<10MB), set minimum chunk size so we can see progress
-		option = googleapi.ChunkSize(1)
-	} else {
-		// on larger uploads, use the default chunk size for best performance (~8MB!)
-		option = googleapi.ChunkSize(googleapi.DefaultUploadChunkSize)
-	}
+	option := googleapi.ChunkSize(googleapi.DefaultUploadChunkSize)
 
 	fmt.Printf("Uploading file '%s'...\n", *filename)
 
 	var video *youtube.Video
-	if lreader != nil {
-		// rate-limited reader
-		video, err = call.Media(lreader, option).Do()
-	} else {
-		video, err = call.Media(reader, option).Do()
-	}
+	video, err = call.Media(reader, option).Do()
 	if err != nil {
 		if video != nil {
 			log.Fatalf("Error making YouTube API call: %v, %v", err, video.HTTPStatusCode)
@@ -152,39 +106,4 @@ func main() {
 		}
 	}
 	fmt.Printf("\nUpload successful! Video ID: %v\n", video.Id)
-}
-
-func (r *customReader) progress(bps int64) {
-	if r.fileSize > 0 {
-		eta := time.Duration((r.fileSize-r.bytes)/bps) * time.Second
-		fmt.Printf("\rTransfer rate %.2f Mbps, %d / %d (%.2f%%) ETA %s", float32(bps*8)/(1000*1000), r.bytes, r.fileSize, float32(r.bytes)/float32(r.fileSize)*100, eta)
-	} else {
-		fmt.Printf("\rTransfer rate %.2f Mbps, %d", float32(bps*8)/(1000*1000), r.bytes)
-	}
-}
-
-func (r *customReader) Read(p []byte) (n int, err error) {
-	if r.startTime.IsZero() {
-		r.startTime = time.Now()
-	}
-	if r.lapTime.IsZero() {
-		r.lapTime = time.Now()
-	}
-	if len(p) == 0 {
-		return 0, nil
-	}
-	n, err = r.Reader.Read(p)
-	r.bytes += int64(n)
-
-	if time.Since(r.lapTime) >= time.Second || err == io.EOF {
-		timeSince := int64(time.Since(r.startTime).Seconds())
-		if timeSince == 0 {
-			r.progress(r.bytes)
-		} else {
-			r.progress(r.bytes / timeSince)
-		}
-		r.lapTime = time.Now()
-	}
-
-	return n, err
 }
