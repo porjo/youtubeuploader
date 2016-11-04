@@ -26,7 +26,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mxk/go-flowrate/flowrate"
+	"github.com/porjo/go-flowrate/flowrate"
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2"
 	"google.golang.org/api/googleapi"
@@ -40,8 +40,8 @@ var (
 	category     = flag.String("category", "", "Video category")
 	keywords     = flag.String("keywords", "", "Comma separated list of video keywords")
 	privacy      = flag.String("privacy", "private", "Video privacy status")
-	showProgress = flag.Bool("progress", true, "Show progress indicator")
-	rate         = flag.Int("ratelimit", 0, "Rate limit upload in kB/s. No limit by default")
+	showProgress = flag.Bool("progress", false, "Show progress indicator")
+	rate         = flag.Int("ratelimit", 0, "Rate limit upload in KiB/s. No limit by default")
 )
 
 func main() {
@@ -91,12 +91,12 @@ func main() {
 	}
 
 	ctx := context.Background()
-	if *showProgress {
-		transport := &limitTransport{rt: http.DefaultTransport, filesize: filesize}
-		ctx = context.WithValue(ctx, oauth2.HTTPClient, &http.Client{
-			Transport: transport,
-		})
+	transport := &limitTransport{rt: http.DefaultTransport, filesize: filesize}
+	ctx = context.WithValue(ctx, oauth2.HTTPClient, &http.Client{
+		Transport: transport,
+	})
 
+	if *showProgress {
 		ticker := time.NewTicker(time.Millisecond * 500).C
 		quitChan := make(chan bool)
 		defer func() {
@@ -107,8 +107,8 @@ func main() {
 				select {
 				case <-ticker:
 					if transport.reader != nil {
-						s := transport.reader.Status()
-						fmt.Printf("\rProgress: %.2f Mbps, %d / %d (%s) ETA %s", float32(s.AvgRate*8)/(1000*1000), s.Bytes, filesize, s.Progress, s.TimeRem)
+						s := transport.reader.Monitor.Status()
+						fmt.Printf("\rProgress: %.2f Mbps, %d / %d (%s) ETA %s", float32(s.CurRate*8)/(1000*1000), s.Bytes, filesize, s.Progress, s.TimeRem)
 					}
 				case <-quitChan:
 					return
@@ -144,8 +144,13 @@ func main() {
 
 	var option googleapi.MediaOption
 	var video *youtube.Video
-	//option = googleapi.ChunkSize(googleapi.DefaultUploadChunkSize)
-	option = googleapi.ChunkSize(1000000)
+
+	// our RoundTrip gets bypassed if the filesize < DefaultUploadChunkSize
+	if googleapi.DefaultUploadChunkSize > filesize {
+		option = googleapi.ChunkSize(int(filesize / 2))
+	} else {
+		option = googleapi.ChunkSize(googleapi.DefaultUploadChunkSize)
+	}
 	video, err = call.Media(reader, option).Do()
 	if err != nil {
 		if video != nil {
@@ -165,9 +170,21 @@ type limitTransport struct {
 
 func (t *limitTransport) RoundTrip(r *http.Request) (res *http.Response, err error) {
 
-	if r.ContentLength > 1000 && t.reader == nil {
+	// FIXME need a better way to detect which roundtrip is the media upload
+	if r.ContentLength > 1000 {
+		var monitor *flowrate.Monitor
+
+		if t.reader != nil {
+			monitor = t.reader.Monitor
+		}
 		t.reader = flowrate.NewReader(r.Body, int64(*rate*1000))
-		t.reader.SetTransferSize(t.filesize)
+
+		if monitor != nil {
+			// carry over stats to new limiter
+			t.reader.Monitor = monitor
+		} else {
+			t.reader.Monitor.SetTransferSize(t.filesize)
+		}
 		r.Body = ioutil.NopCloser(t.reader)
 	}
 
