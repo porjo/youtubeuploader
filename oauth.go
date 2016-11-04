@@ -28,6 +28,7 @@ import (
 	"runtime"
 	"time"
 
+	"golang.org/x/net/context"
 	"golang.org/x/oauth2"
 )
 
@@ -175,7 +176,7 @@ func startWebServer() (callbackCh chan CallbackStatus, err error) {
 // the redirect completes to the /oauth2callback URI.
 // It returns an instance of an HTTP client that can be passed to the
 // constructor of the YouTube client.
-func buildOAuthHTTPClient(scope string) (*http.Client, error) {
+func buildOAuthHTTPClient(ctx context.Context, scope string) (*http.Client, error) {
 	config, err := readConfig(scope)
 	if err != nil {
 		msg := fmt.Sprintf("Cannot read configuration file: %v", err)
@@ -229,7 +230,7 @@ func buildOAuthHTTPClient(scope string) (*http.Client, error) {
 		}
 	}
 
-	return config.Client(oauth2.NoContext, token), nil
+	return config.Client(ctx, token), nil
 }
 
 // Token retreives the token from the token cache

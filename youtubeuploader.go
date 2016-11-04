@@ -18,6 +18,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -26,6 +27,8 @@ import (
 	"time"
 
 	"github.com/mxk/go-flowrate/flowrate"
+	"golang.org/x/net/context"
+	"golang.org/x/oauth2"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/youtube/v3"
 )
@@ -87,13 +90,36 @@ func main() {
 		defer file.Close()
 	}
 
-	client, err := buildOAuthHTTPClient(youtube.YoutubeUploadScope)
+	ctx := context.Background()
+	if *showProgress {
+		transport := &limitTransport{rt: http.DefaultTransport, filesize: filesize}
+		ctx = context.WithValue(ctx, oauth2.HTTPClient, &http.Client{
+			Transport: transport,
+		})
+
+		ticker := time.NewTicker(time.Millisecond * 500).C
+		quitChan := make(chan bool)
+		defer func() {
+			quitChan <- true
+		}()
+		go func() {
+			for {
+				select {
+				case <-ticker:
+					if transport.reader != nil {
+						s := transport.reader.Status()
+						fmt.Printf("\rProgress: %.2f Mbps, %d / %d (%s) ETA %s", float32(s.AvgRate*8)/(1000*1000), s.Bytes, filesize, s.Progress, s.TimeRem)
+					}
+				case <-quitChan:
+					return
+				}
+			}
+		}()
+	}
+	client, err := buildOAuthHTTPClient(ctx, youtube.YoutubeUploadScope)
 	if err != nil {
 		log.Fatalf("Error building OAuth client: %v", err)
 	}
-	transport := &limitTransport{RoundTripper: client.Transport, filesize: 0}
-	transport.filesize = filesize
-	client.Transport = transport
 
 	service, err := youtube.New(client)
 	if err != nil {
@@ -132,44 +158,18 @@ func main() {
 }
 
 type limitTransport struct {
-	http.RoundTripper
-	monitor  *flowrate.Monitor
+	rt       http.RoundTripper
+	reader   *flowrate.Reader
 	filesize int64
 }
 
 func (t *limitTransport) RoundTrip(r *http.Request) (res *http.Response, err error) {
-	var body *flowrate.Reader
-	if *rate > 0 {
-		body = flowrate.NewReader(r.Body, int64(*rate*1000))
-	} else {
-		body = flowrate.NewReader(r.Body, -1)
-	}
-	if t.monitor != nil {
-		body.Monitor = t.monitor
-	} else {
-		body.Monitor.SetTransferSize(t.filesize)
-		t.monitor = body.Monitor
-	}
-	r.Body = body
 
-	if *showProgress {
-		ticker := time.NewTicker(time.Millisecond * 500).C
-		quitChan := make(chan bool)
-		defer func() {
-			quitChan <- true
-		}()
-		go func() {
-			for {
-				select {
-				case <-ticker:
-					s := body.Monitor.Status()
-					fmt.Printf("\rProgress: %.2f Mbps, %d / %d (%s) ETA %s", float32(s.AvgRate*8)/(1000*1000), s.Bytes, t.filesize, s.Progress, s.TimeRem)
-				case <-quitChan:
-					return
-				}
-			}
-		}()
+	if r.ContentLength > 1000 && t.reader == nil {
+		t.reader = flowrate.NewReader(r.Body, int64(*rate*1000))
+		t.reader.SetTransferSize(t.filesize)
+		r.Body = ioutil.NopCloser(t.reader)
 	}
 
-	return t.RoundTripper.RoundTrip(r)
+	return t.rt.RoundTrip(r)
 }
