@@ -34,14 +34,14 @@ import (
 )
 
 var (
-	filename     = flag.String("filename", "", "Filename to upload. Can be a URL")
-	title        = flag.String("title", "Video Title", "Video title")
-	description  = flag.String("description", "uploaded by youtubeuploader", "Video description")
-	category     = flag.String("category", "", "Video category")
-	keywords     = flag.String("keywords", "", "Comma separated list of video keywords")
-	privacy      = flag.String("privacy", "private", "Video privacy status")
-	showProgress = flag.Bool("progress", false, "Show progress indicator")
-	rate         = flag.Int("ratelimit", 0, "Rate limit upload in KiB/s. No limit by default")
+	filename    = flag.String("filename", "", "Filename to upload. Can be a URL")
+	title       = flag.String("title", "Video Title", "Video title")
+	description = flag.String("description", "uploaded by youtubeuploader", "Video description")
+	category    = flag.String("category", "", "Video category")
+	keywords    = flag.String("keywords", "", "Comma separated list of video keywords")
+	privacy     = flag.String("privacy", "private", "Video privacy status")
+	quiet       = flag.Bool("quiet", false, "Suppress progress indicator")
+	rate        = flag.Int("ratelimit", 0, "Rate limit upload in KiB/s. No limit by default")
 )
 
 func main() {
@@ -96,7 +96,7 @@ func main() {
 		Transport: transport,
 	})
 
-	if *showProgress {
+	if !*quiet {
 		ticker := time.NewTicker(time.Millisecond * 500).C
 		quitChan := make(chan bool)
 		defer func() {
@@ -151,6 +151,9 @@ func main() {
 	} else {
 		option = googleapi.ChunkSize(googleapi.DefaultUploadChunkSize)
 	}
+
+	fmt.Printf("Uploading file '%s'...\n", *filename)
+
 	video, err = call.Media(reader, option).Do()
 	if err != nil {
 		if video != nil {
