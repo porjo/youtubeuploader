@@ -108,7 +108,7 @@ func main() {
 				case <-ticker:
 					if transport.reader != nil {
 						s := transport.reader.Monitor.Status()
-						fmt.Printf("\rProgress: %.2f Mbps, %d / %d (%s) ETA %s", float32(s.CurRate*8)/(1000*1000), s.Bytes, filesize, s.Progress, s.TimeRem)
+						fmt.Printf("\rProgress: %.2f KiB/s, %d / %d (%s) ETA %s", float32(s.CurRate)/(1000), s.Bytes, filesize, s.Progress, s.TimeRem)
 					}
 				case <-quitChan:
 					return
