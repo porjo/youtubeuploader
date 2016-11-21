@@ -97,7 +97,7 @@ func main() {
 	})
 
 	if !*quiet {
-		ticker := time.NewTicker(time.Millisecond * 500).C
+		ticker := time.NewTicker(time.Second).C
 		quitChan := make(chan bool)
 		defer func() {
 			quitChan <- true
@@ -108,7 +108,7 @@ func main() {
 				case <-ticker:
 					if transport.reader != nil {
 						s := transport.reader.Monitor.Status()
-						fmt.Printf("\rProgress: %.2f KiB/s, %d / %d (%s) ETA %s", float32(s.CurRate)/(1000), s.Bytes, filesize, s.Progress, s.TimeRem)
+						fmt.Printf("\rProgress: %.2f KiB/s, %d / %d (%s) ETA %s", float32(s.CurRate)/1000, s.Bytes, filesize, s.Progress, s.TimeRem)
 					}
 				case <-quitChan:
 					return
