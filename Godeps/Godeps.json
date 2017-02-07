@@ -1,0 +1,43 @@
+{
+	"ImportPath": "github.com/porjo/youtubeuploader",
+	"GoVersion": "go1.6",
+	"GodepVersion": "v74",
+	"Deps": [
+		{
+			"ImportPath": "github.com/porjo/go-flowrate/flowrate",
+			"Rev": "fa9daee00a24a92cc8e8f66f408ac5f53826c14c"
+		},
+		{
+			"ImportPath": "golang.org/x/net/context",
+			"Rev": "236b8f043b920452504e263bc21d354427127473"
+		},
+		{
+			"ImportPath": "golang.org/x/net/context/ctxhttp",
+			"Rev": "236b8f043b920452504e263bc21d354427127473"
+		},
+		{
+			"ImportPath": "golang.org/x/oauth2",
+			"Rev": "d5040cddfc0da40b408c9a1da4728662435176a9"
+		},
+		{
+			"ImportPath": "golang.org/x/oauth2/internal",
+			"Rev": "d5040cddfc0da40b408c9a1da4728662435176a9"
+		},
+		{
+			"ImportPath": "google.golang.org/api/gensupport",
+			"Rev": "0e63b4e123c8b6a2c065594aca23685d6e75fe9f"
+		},
+		{
+			"ImportPath": "google.golang.org/api/googleapi",
+			"Rev": "0e63b4e123c8b6a2c065594aca23685d6e75fe9f"
+		},
+		{
+			"ImportPath": "google.golang.org/api/googleapi/internal/uritemplates",
+			"Rev": "0e63b4e123c8b6a2c065594aca23685d6e75fe9f"
+		},
+		{
+			"ImportPath": "google.golang.org/api/youtube/v3",
+			"Rev": "0e63b4e123c8b6a2c065594aca23685d6e75fe9f"
+		}
+	]
+}
