@@ -9,8 +9,11 @@ Scripted uploads to youtube.
 
 Grab a [precompiled binary](https://github.com/porjo/youtubeuploader/releases) for Linux or build yourself:
 
-- Install Go e.g. `yum install golang`
-- `go get github.com/porjo/youtubeuploader`
+This project uses [Go vendoring](https://blog.gopheracademy.com/advent-2015/vendor-folder/), so make sure you are using Go version 1.6+
+
+- Install Go e.g. `yum install golang` or `apt-get install golang`
+- Define your Go Path e.g. `export GOPATH=$HOME/go`
+- Fetch the project `go get github.com/porjo/youtubeuploader`
 
 ## Setup
 
