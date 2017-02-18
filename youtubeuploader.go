@@ -15,6 +15,7 @@ limitations under the License.
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -37,12 +38,21 @@ var (
 	filename    = flag.String("filename", "", "Filename to upload. Can be a URL")
 	title       = flag.String("title", "Video Title", "Video title")
 	description = flag.String("description", "uploaded by youtubeuploader", "Video description")
-	category    = flag.String("category", "", "Video category")
-	keywords    = flag.String("keywords", "", "Comma separated list of video keywords")
+	categoryId  = flag.String("categoryId", "", "Video category Id")
+	tags        = flag.String("tags", "", "Comma separated list of video tags")
 	privacy     = flag.String("privacy", "private", "Video privacy status")
 	quiet       = flag.Bool("quiet", false, "Suppress progress indicator")
 	rate        = flag.Int("ratelimit", 0, "Rate limit upload in KiB/s. No limit by default")
+	metaJSON    = flag.String("metaJSON", "", "JSON file containing title,description,tags etc (optional)")
 )
+
+type Snippet struct {
+	Title         string   `json:"title,omitempty"`
+	Description   string   `json:"description,omitempty"`
+	CategoryId    string   `json:"categoryId,omitempty"`
+	PrivacyStatus string   `json:"privacyStatus,omitempty"`
+	Tags          []string `json:"tags,omitempty"`
+}
 
 func main() {
 	flag.Parse()
@@ -108,7 +118,7 @@ func main() {
 				case <-ticker:
 					if transport.reader != nil {
 						s := transport.reader.Monitor.Status()
-						fmt.Printf("\rProgress: %.2f KiB/s, %d / %d (%s) ETA %s", float32(s.CurRate)/1000, s.Bytes, filesize, s.Progress, s.TimeRem)
+						fmt.Printf("\rProgress: %8.2f KiB/s, %d / %d (%s) ETA %8s", float32(s.CurRate)/1000, s.Bytes, filesize, s.Progress, s.TimeRem)
 					}
 				case <-quitChan:
 					return
@@ -127,17 +137,45 @@ func main() {
 	}
 
 	upload := &youtube.Video{
-		Snippet: &youtube.VideoSnippet{
-			Title:       *title,
-			Description: *description,
-			CategoryId:  *category,
-		},
-		Status: &youtube.VideoStatus{PrivacyStatus: *privacy},
+		Snippet: &youtube.VideoSnippet{},
 	}
 
-	// The API returns a 400 Bad Request response if tags is an empty string.
-	if strings.Trim(*keywords, "") != "" {
-		upload.Snippet.Tags = strings.Split(*keywords, ",")
+	// attempt to load from meta JSON, otherwise use values specified from command line flags
+	if *metaJSON != "" {
+		snippet := Snippet{}
+		file, e := ioutil.ReadFile(*metaJSON)
+		if e != nil {
+			fmt.Printf("Could not read metaJSON file '%s': %s\n", *metaJSON, e)
+			fmt.Println("Will use command line flags instead")
+		}
+
+		e = json.Unmarshal(file, &snippet)
+		if e != nil {
+			fmt.Printf("Could not read metaJSON file '%s': %s\n", *metaJSON, e)
+			fmt.Println("Will use command line flags instead")
+		}
+
+		upload.Snippet.Tags = snippet.Tags
+		upload.Snippet.Title = snippet.Title
+		upload.Snippet.Description = snippet.Description
+		upload.Snippet.CategoryId = snippet.CategoryId
+		upload.Status = &youtube.VideoStatus{PrivacyStatus: snippet.PrivacyStatus}
+	}
+
+	if upload.Status.PrivacyStatus == "" {
+		upload.Status = &youtube.VideoStatus{PrivacyStatus: *privacy}
+	}
+	if upload.Snippet.Tags == nil && strings.Trim(*tags, "") != "" {
+		upload.Snippet.Tags = strings.Split(*tags, ",")
+	}
+	if upload.Snippet.Title == "" {
+		upload.Snippet.Title = *title
+	}
+	if upload.Snippet.Description == "" {
+		upload.Snippet.Title = *description
+	}
+	if upload.Snippet.CategoryId == "" && *categoryId != "" {
+		upload.Snippet.Title = *categoryId
 	}
 
 	call := service.Videos.Insert("snippet,status", upload)

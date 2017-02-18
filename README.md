@@ -59,27 +59,45 @@ Full list of options:
 Usage of ./youtubeuploader:
   -cache string
     	Token cache file (default "request.token")
-  -category string
-    	Video category (default "22")
+  -categoryId string
+    	Video category Id
   -description string
-    	Video description (default "Test Description")
+    	Video description (default "uploaded by youtubeuploader")
   -filename string
     	Filename to upload. Can be a URL
-  -keywords string
-    	Comma separated list of video keywords
+  -metaJSON string
+    	JSON file containing title,description,tags etc (optional)
   -privacy string
     	Video privacy status (default "private")
-  -progress
-    	Show progress indicator (default true)
+  -quiet
+    	Suppress progress indicator
   -ratelimit int
-    	Rate limit upload in KB/s. No limit by default
+    	Rate limit upload in KiB/s. No limit by default
   -secrets string
     	Client Secrets configuration (default "client_secrets.json")
+  -tags string
+    	Comma separated list of video tags
   -title string
-    	Video title (default "Test Title")
+    	Video title (default "Video Title")
 ```
 *NOTE:* When specifying a URL as the filename, the data will be streamed through the localhost (download from remote host, then upload to Youtube)
 
-### Credit
+
+### Metadata
+
+Video title, description etc can specified via the command line flags or via a JSON file using the `-metaJSON` flag. An example JSON file would be:
+
+```json
+{
+  "title": "my test title",
+  "description": "my test description",
+  "tags": ["test tag1", "test tag2"],
+  "privacyStatus": "public",
+  "categoryId": "10"
+}
+```
+All fields are optional. Command line flags will be used by default.
+
+## Credit
 
 Based on [Go Youtube API Sample code](https://github.com/youtube/api-samples/tree/master/go)
