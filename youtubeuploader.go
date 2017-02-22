@@ -138,6 +138,7 @@ func main() {
 
 	upload := &youtube.Video{
 		Snippet: &youtube.VideoSnippet{},
+		Status:  &youtube.VideoStatus{},
 	}
 
 	// attempt to load from meta JSON, otherwise use values specified from command line flags
@@ -159,7 +160,7 @@ func main() {
 		upload.Snippet.Title = snippet.Title
 		upload.Snippet.Description = snippet.Description
 		upload.Snippet.CategoryId = snippet.CategoryId
-		upload.Status = &youtube.VideoStatus{PrivacyStatus: snippet.PrivacyStatus}
+		upload.Status.PrivacyStatus = snippet.PrivacyStatus
 	}
 
 	if upload.Status.PrivacyStatus == "" {
@@ -172,7 +173,7 @@ func main() {
 		upload.Snippet.Title = *title
 	}
 	if upload.Snippet.Description == "" {
-		upload.Snippet.Title = *description
+		upload.Snippet.Description = *description
 	}
 	if upload.Snippet.CategoryId == "" && *categoryId != "" {
 		upload.Snippet.Title = *categoryId
