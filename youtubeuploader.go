@@ -42,7 +42,7 @@ var (
 	tags        = flag.String("tags", "", "Comma separated list of video tags")
 	privacy     = flag.String("privacy", "private", "Video privacy status")
 	quiet       = flag.Bool("quiet", false, "Suppress progress indicator")
-	rate        = flag.Int("ratelimit", 0, "Rate limit upload in KiB/s. No limit by default")
+	rate        = flag.Int("ratelimit", 0, "Rate limit upload in kbps. No limit by default")
 	metaJSON    = flag.String("metaJSON", "", "JSON file containing title,description,tags etc (optional)")
 )
 
@@ -118,7 +118,12 @@ func main() {
 				case <-ticker:
 					if transport.reader != nil {
 						s := transport.reader.Monitor.Status()
-						fmt.Printf("\rProgress: %8.2f KiB/s, %d / %d (%s) ETA %8s", float32(s.CurRate)/1000, s.Bytes, filesize, s.Progress, s.TimeRem)
+						curRate := float32(s.CurRate)
+						if curRate >= 125000 {
+							fmt.Printf("\rProgress: %8.2f Mbps, %d / %d (%s) ETA %8s", curRate/125000, s.Bytes, filesize, s.Progress, s.TimeRem)
+						} else {
+							fmt.Printf("\rProgress: %8.2f kbps, %d / %d (%s) ETA %8s", curRate/125, s.Bytes, filesize, s.Progress, s.TimeRem)
+						}
 					}
 				case <-quitChan:
 					return
@@ -219,7 +224,7 @@ func (t *limitTransport) RoundTrip(r *http.Request) (res *http.Response, err err
 		if t.reader != nil {
 			monitor = t.reader.Monitor
 		}
-		t.reader = flowrate.NewReader(r.Body, int64(*rate*1000))
+		t.reader = flowrate.NewReader(r.Body, int64(*rate*125))
 
 		if monitor != nil {
 			// carry over stats to new limiter
