@@ -5,9 +5,11 @@ Scripted uploads to youtube.
 - upload video files from local disk or from the web.
 - ratelimit upload bandwidth
 
-## Build
+## Download
 
-Grab a [precompiled binary](https://github.com/porjo/youtubeuploader/releases) for Linux or build yourself:
+Grab a [precompiled binary](https://github.com/porjo/youtubeuploader/releases) for Linux or build it yourself.
+
+## Build
 
 This project uses [Go vendoring](https://blog.gopheracademy.com/advent-2015/vendor-folder/), so make sure you are using Go version 1.6+
 
@@ -72,7 +74,7 @@ Usage of ./youtubeuploader:
   -quiet
     	Suppress progress indicator
   -ratelimit int
-    	Rate limit upload in KiB/s. No limit by default
+    	Rate limit upload in kbps. No limit by default
   -secrets string
     	Client Secrets configuration (default "client_secrets.json")
   -tags string
@@ -96,7 +98,7 @@ Video title, description etc can specified via the command line flags or via a J
   "categoryId": "10"
 }
 ```
-All fields are optional. Command line flags will be used by default.
+All fields are optional. Command line flags will be used by default. Use `\n` in the description to insert newlines.
 
 ## Credit
 
