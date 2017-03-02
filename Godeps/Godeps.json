@@ -25,19 +25,19 @@
 		},
 		{
 			"ImportPath": "google.golang.org/api/gensupport",
-			"Rev": "0e63b4e123c8b6a2c065594aca23685d6e75fe9f"
+			"Rev": "f786854525c2e5b0b49c2a301b0ff076d2ae20df"
 		},
 		{
 			"ImportPath": "google.golang.org/api/googleapi",
-			"Rev": "0e63b4e123c8b6a2c065594aca23685d6e75fe9f"
+			"Rev": "f786854525c2e5b0b49c2a301b0ff076d2ae20df"
 		},
 		{
 			"ImportPath": "google.golang.org/api/googleapi/internal/uritemplates",
-			"Rev": "0e63b4e123c8b6a2c065594aca23685d6e75fe9f"
+			"Rev": "f786854525c2e5b0b49c2a301b0ff076d2ae20df"
 		},
 		{
 			"ImportPath": "google.golang.org/api/youtube/v3",
-			"Rev": "0e63b4e123c8b6a2c065594aca23685d6e75fe9f"
+			"Rev": "f786854525c2e5b0b49c2a301b0ff076d2ae20df"
 		}
 	]
 }

@@ -93,6 +93,7 @@ func New(client *http.Client) (*Service, error) {
 	s.Search = NewSearchService(s)
 	s.Sponsors = NewSponsorsService(s)
 	s.Subscriptions = NewSubscriptionsService(s)
+	s.SuperChatEvents = NewSuperChatEventsService(s)
 	s.Thumbnails = NewThumbnailsService(s)
 	s.VideoAbuseReportReasons = NewVideoAbuseReportReasonsService(s)
 	s.VideoCategories = NewVideoCategoriesService(s)
@@ -102,9 +103,10 @@ func New(client *http.Client) (*Service, error) {
 }
 
 type Service struct {
-	client    *http.Client
-	BasePath  string // API endpoint base URL
-	UserAgent string // optional additional User-Agent fragment
+	client                    *http.Client
+	BasePath                  string // API endpoint base URL
+	UserAgent                 string // optional additional User-Agent fragment
+	GoogleClientHeaderElement string // client header fragment, for Google use only
 
 	Activities *ActivitiesService
 
@@ -148,6 +150,8 @@ type Service struct {
 
 	Subscriptions *SubscriptionsService
 
+	SuperChatEvents *SuperChatEventsService
+
 	Thumbnails *ThumbnailsService
 
 	VideoAbuseReportReasons *VideoAbuseReportReasonsService
@@ -164,6 +168,10 @@ func (s *Service) userAgent() string {
 		return googleapi.UserAgent
 	}
 	return googleapi.UserAgent + " " + s.UserAgent
+}
+
+func (s *Service) clientHeader() string {
+	return gensupport.GoogleClientHeader("20170210", s.GoogleClientHeaderElement)
 }
 
 func NewActivitiesService(s *Service) *ActivitiesService {
@@ -352,6 +360,15 @@ func NewSubscriptionsService(s *Service) *SubscriptionsService {
 }
 
 type SubscriptionsService struct {
+	s *Service
+}
+
+func NewSuperChatEventsService(s *Service) *SuperChatEventsService {
+	rs := &SuperChatEventsService{s: s}
+	return rs
+}
+
+type SuperChatEventsService struct {
 	s *Service
 }
 
@@ -1336,6 +1353,7 @@ type CdnSettings struct {
 	// Possible values:
 	//   "1080p"
 	//   "1440p"
+	//   "2160p"
 	//   "240p"
 	//   "360p"
 	//   "480p"
@@ -1576,13 +1594,9 @@ func (s *ChannelBrandingSettings) MarshalJSON() ([]byte, error) {
 
 // ChannelContentDetails: Details about the content of a channel.
 type ChannelContentDetails struct {
-	// GooglePlusUserId: The googlePlusUserId object identifies the Google+
-	// profile ID associated with this channel.
-	GooglePlusUserId string `json:"googlePlusUserId,omitempty"`
-
 	RelatedPlaylists *ChannelContentDetailsRelatedPlaylists `json:"relatedPlaylists,omitempty"`
 
-	// ForceSendFields is a list of field names (e.g. "GooglePlusUserId") to
+	// ForceSendFields is a list of field names (e.g. "RelatedPlaylists") to
 	// unconditionally include in API requests. By default, fields with
 	// empty values are omitted from API requests. However, any non-pointer,
 	// non-interface field appearing in ForceSendFields will be sent to the
@@ -1590,7 +1604,7 @@ type ChannelContentDetails struct {
 	// used to include empty fields in Patch requests.
 	ForceSendFields []string `json:"-"`
 
-	// NullFields is a list of field names (e.g. "GooglePlusUserId") to
+	// NullFields is a list of field names (e.g. "RelatedPlaylists") to
 	// include in API requests with the JSON null value. By default, fields
 	// with empty values are omitted from API requests. However, any field
 	// with an empty value appearing in NullFields will be sent to the
@@ -2382,12 +2396,16 @@ func (s *ChannelStatus) MarshalJSON() ([]byte, error) {
 // ChannelTopicDetails: Freebase topic information related to the
 // channel.
 type ChannelTopicDetails struct {
+	// TopicCategories: A list of Wikipedia URLs that describe the channel's
+	// content.
+	TopicCategories []string `json:"topicCategories,omitempty"`
+
 	// TopicIds: A list of Freebase topic IDs associated with the channel.
 	// You can retrieve information about each topic using the Freebase
 	// Topic API.
 	TopicIds []string `json:"topicIds,omitempty"`
 
-	// ForceSendFields is a list of field names (e.g. "TopicIds") to
+	// ForceSendFields is a list of field names (e.g. "TopicCategories") to
 	// unconditionally include in API requests. By default, fields with
 	// empty values are omitted from API requests. However, any non-pointer,
 	// non-interface field appearing in ForceSendFields will be sent to the
@@ -2395,12 +2413,13 @@ type ChannelTopicDetails struct {
 	// used to include empty fields in Patch requests.
 	ForceSendFields []string `json:"-"`
 
-	// NullFields is a list of field names (e.g. "TopicIds") to include in
-	// API requests with the JSON null value. By default, fields with empty
-	// values are omitted from API requests. However, any field with an
-	// empty value appearing in NullFields will be sent to the server as
-	// null. It is an error if a field in this list has a non-empty value.
-	// This may be used to include null fields in Patch requests.
+	// NullFields is a list of field names (e.g. "TopicCategories") to
+	// include in API requests with the JSON null value. By default, fields
+	// with empty values are omitted from API requests. However, any field
+	// with an empty value appearing in NullFields will be sent to the
+	// server as null. It is an error if a field in this list has a
+	// non-empty value. This may be used to include null fields in Patch
+	// requests.
 	NullFields []string `json:"-"`
 }
 
@@ -2516,10 +2535,6 @@ type CommentSnippet struct {
 
 	// AuthorDisplayName: The name of the user who posted the comment.
 	AuthorDisplayName string `json:"authorDisplayName,omitempty"`
-
-	// AuthorGoogleplusProfileUrl: Link to the author's Google+ profile, if
-	// any.
-	AuthorGoogleplusProfileUrl string `json:"authorGoogleplusProfileUrl,omitempty"`
 
 	// AuthorProfileImageUrl: The URL for the avatar of the user who posted
 	// the comment.
@@ -2792,7 +2807,7 @@ func (s *CommentThreadSnippet) MarshalJSON() ([]byte, error) {
 }
 
 // ContentRating: Ratings schemes. The country-specific ratings are
-// mostly for movies and shows. NEXT_ID: 68
+// mostly for movies and shows. NEXT_ID: 69
 type ContentRating struct {
 	// AcbRating: The video's Australian Classification Board (ACB) or
 	// Australian Communications and Media Authority (ACMA) rating. ACMA
@@ -3345,6 +3360,19 @@ type ContentRating struct {
 	//   "mccypUnrated"
 	MccypRating string `json:"mccypRating,omitempty"`
 
+	// McstRating: The video's rating system for Vietnam - MCST
+	//
+	// Possible values:
+	//   "mcst0"
+	//   "mcst16plus"
+	//   "mcstC13"
+	//   "mcstC16"
+	//   "mcstC18"
+	//   "mcstGPg"
+	//   "mcstP"
+	//   "mcstUnrated"
+	McstRating string `json:"mcstRating,omitempty"`
+
 	// MdaRating: The video's rating from Singapore's Media Development
 	// Authority (MDA) and, specifically, it's Board of Film Censors (BFC).
 	//
@@ -3850,6 +3878,24 @@ func (s *GeoPoint) MarshalJSON() ([]byte, error) {
 	type noMethod GeoPoint
 	raw := noMethod(*s)
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+func (s *GeoPoint) UnmarshalJSON(data []byte) error {
+	type noMethod GeoPoint
+	var s1 struct {
+		Altitude  gensupport.JSONFloat64 `json:"altitude"`
+		Latitude  gensupport.JSONFloat64 `json:"latitude"`
+		Longitude gensupport.JSONFloat64 `json:"longitude"`
+		*noMethod
+	}
+	s1.noMethod = (*noMethod)(s)
+	if err := json.Unmarshal(data, &s1); err != nil {
+		return err
+	}
+	s.Altitude = float64(s1.Altitude)
+	s.Latitude = float64(s1.Latitude)
+	s.Longitude = float64(s1.Longitude)
+	return nil
 }
 
 // GuideCategory: A guideCategory resource identifies a category that
@@ -5440,7 +5486,8 @@ type LiveChatMessageSnippet struct {
 	// newSponsorEvent - the user that just became a sponsor
 	// messageDeletedEvent - the moderator that took the action
 	// messageRetractedEvent - the author that retracted their message
-	// userBannedEvent - the moderator that took the action
+	// userBannedEvent - the moderator that took the action superChatEvent -
+	// the user that made the purchase
 	AuthorChannelId string `json:"authorChannelId,omitempty"`
 
 	// DisplayMessage: Contains a string that can be displayed to the user.
@@ -5475,6 +5522,10 @@ type LiveChatMessageSnippet struct {
 	// (YYYY-MM-DDThh:mm:ss.sZ) format.
 	PublishedAt string `json:"publishedAt,omitempty"`
 
+	// SuperChatDetails: Details about the Super Chat event, this is only
+	// set if the type is 'superChatEvent'.
+	SuperChatDetails *LiveChatSuperChatDetails `json:"superChatDetails,omitempty"`
+
 	// TextMessageDetails: Details about the text message, this is only set
 	// if the type is 'textMessageEvent'.
 	TextMessageDetails *LiveChatTextMessageDetails `json:"textMessageDetails,omitempty"`
@@ -5494,6 +5545,7 @@ type LiveChatMessageSnippet struct {
 	//   "pollVotedEvent"
 	//   "sponsorOnlyModeEndedEvent"
 	//   "sponsorOnlyModeStartedEvent"
+	//   "superChatEvent"
 	//   "textMessageEvent"
 	//   "tombstone"
 	//   "userBannedEvent"
@@ -5799,6 +5851,49 @@ type LiveChatPollVotedDetails struct {
 
 func (s *LiveChatPollVotedDetails) MarshalJSON() ([]byte, error) {
 	type noMethod LiveChatPollVotedDetails
+	raw := noMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+type LiveChatSuperChatDetails struct {
+	// AmountDisplayString: A rendered string that displays the fund amount
+	// and currency to the user.
+	AmountDisplayString string `json:"amountDisplayString,omitempty"`
+
+	// AmountMicros: The amount purchased by the user, in micros (1,750,000
+	// micros = 1.75).
+	AmountMicros uint64 `json:"amountMicros,omitempty,string"`
+
+	// Currency: The currency in which the purchase was made.
+	Currency string `json:"currency,omitempty"`
+
+	// Tier: The tier in which the amount belongs to. Lower amounts belong
+	// to lower tiers. Starts at 1.
+	Tier int64 `json:"tier,omitempty"`
+
+	// UserComment: The comment added by the user to this Super Chat event.
+	UserComment string `json:"userComment,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "AmountDisplayString")
+	// to unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "AmountDisplayString") to
+	// include in API requests with the JSON null value. By default, fields
+	// with empty values are omitted from API requests. However, any field
+	// with an empty value appearing in NullFields will be sent to the
+	// server as null. It is an error if a field in this list has a
+	// non-empty value. This may be used to include null fields in Patch
+	// requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *LiveChatSuperChatDetails) MarshalJSON() ([]byte, error) {
+	type noMethod LiveChatSuperChatDetails
 	raw := noMethod(*s)
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
@@ -6574,6 +6669,11 @@ type PlaylistItemContentDetails struct {
 	// retrieve the video resource, set the id query parameter to this value
 	// in your API request.
 	VideoId string `json:"videoId,omitempty"`
+
+	// VideoPublishedAt: The date and time that the video was published to
+	// YouTube. The value is specified in ISO 8601 (YYYY-MM-DDThh:mm:ss.sZ)
+	// format.
+	VideoPublishedAt string `json:"videoPublishedAt,omitempty"`
 
 	// ForceSendFields is a list of field names (e.g. "EndAt") to
 	// unconditionally include in API requests. By default, fields with
@@ -7672,6 +7772,154 @@ func (s *SubscriptionSubscriberSnippet) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
+// SuperChatEvent: A superChatEvent resource represents a Super Chat
+// purchase on a YouTube channel.
+type SuperChatEvent struct {
+	// Etag: Etag of this resource.
+	Etag string `json:"etag,omitempty"`
+
+	// Id: The ID that YouTube assigns to uniquely identify the Super Chat
+	// event.
+	Id string `json:"id,omitempty"`
+
+	// Kind: Identifies what kind of resource this is. Value: the fixed
+	// string "youtube#superChatEvent".
+	Kind string `json:"kind,omitempty"`
+
+	// Snippet: The snippet object contains basic details about the Super
+	// Chat event.
+	Snippet *SuperChatEventSnippet `json:"snippet,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "Etag") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "Etag") to include in API
+	// requests with the JSON null value. By default, fields with empty
+	// values are omitted from API requests. However, any field with an
+	// empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *SuperChatEvent) MarshalJSON() ([]byte, error) {
+	type noMethod SuperChatEvent
+	raw := noMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+type SuperChatEventListResponse struct {
+	// Etag: Etag of this resource.
+	Etag string `json:"etag,omitempty"`
+
+	// EventId: Serialized EventId of the request which produced this
+	// response.
+	EventId string `json:"eventId,omitempty"`
+
+	// Items: A list of Super Chat purchases that match the request
+	// criteria.
+	Items []*SuperChatEvent `json:"items,omitempty"`
+
+	// Kind: Identifies what kind of resource this is. Value: the fixed
+	// string "youtube#superChatEventListResponse".
+	Kind string `json:"kind,omitempty"`
+
+	// NextPageToken: The token that can be used as the value of the
+	// pageToken parameter to retrieve the next page in the result set.
+	NextPageToken string `json:"nextPageToken,omitempty"`
+
+	PageInfo *PageInfo `json:"pageInfo,omitempty"`
+
+	TokenPagination *TokenPagination `json:"tokenPagination,omitempty"`
+
+	// VisitorId: The visitorId identifies the visitor.
+	VisitorId string `json:"visitorId,omitempty"`
+
+	// ServerResponse contains the HTTP response code and headers from the
+	// server.
+	googleapi.ServerResponse `json:"-"`
+
+	// ForceSendFields is a list of field names (e.g. "Etag") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "Etag") to include in API
+	// requests with the JSON null value. By default, fields with empty
+	// values are omitted from API requests. However, any field with an
+	// empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *SuperChatEventListResponse) MarshalJSON() ([]byte, error) {
+	type noMethod SuperChatEventListResponse
+	raw := noMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+type SuperChatEventSnippet struct {
+	// AmountMicros: The purchase amount, in micros of the purchase
+	// currency. e.g., 1 is represented as 1000000.
+	AmountMicros uint64 `json:"amountMicros,omitempty,string"`
+
+	// ChannelId: Channel id where the event occurred.
+	ChannelId string `json:"channelId,omitempty"`
+
+	// CommentText: The text contents of the comment left by the user.
+	CommentText string `json:"commentText,omitempty"`
+
+	// CreatedAt: The date and time when the event occurred. The value is
+	// specified in ISO 8601 (YYYY-MM-DDThh:mm:ss.sZ) format.
+	CreatedAt string `json:"createdAt,omitempty"`
+
+	// Currency: The currency in which the purchase was made. ISO 4217.
+	Currency string `json:"currency,omitempty"`
+
+	// DisplayString: A rendered string that displays the purchase amount
+	// and currency (e.g., "$1.00"). The string is rendered for the given
+	// language.
+	DisplayString string `json:"displayString,omitempty"`
+
+	// MessageType: The tier for the paid message, which is based on the
+	// amount of money spent to purchase the message.
+	MessageType int64 `json:"messageType,omitempty"`
+
+	// SupporterDetails: Details about the supporter.
+	SupporterDetails *ChannelProfileDetails `json:"supporterDetails,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "AmountMicros") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "AmountMicros") to include
+	// in API requests with the JSON null value. By default, fields with
+	// empty values are omitted from API requests. However, any field with
+	// an empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *SuperChatEventSnippet) MarshalJSON() ([]byte, error) {
+	type noMethod SuperChatEventSnippet
+	raw := noMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
 // Thumbnail: A thumbnail is an image representing a YouTube resource.
 type Thumbnail struct {
 	// Height: (Optional) Height of the thumbnail image.
@@ -8322,6 +8570,11 @@ type VideoContentDetails struct {
 	// PT15M51S indicates that the video is 15 minutes and 51 seconds long.
 	Duration string `json:"duration,omitempty"`
 
+	// HasCustomThumbnail: Indicates whether the video uploader has provided
+	// a custom thumbnail image for the video. This property is only visible
+	// to the video uploader.
+	HasCustomThumbnail bool `json:"hasCustomThumbnail,omitempty"`
+
 	// LicensedContent: The value of is_license_content indicates whether
 	// the video is licensed content.
 	LicensedContent bool `json:"licensedContent,omitempty"`
@@ -8453,11 +8706,6 @@ type VideoFileDetails struct {
 	//   "video"
 	FileType string `json:"fileType,omitempty"`
 
-	// RecordingLocation: Geographic coordinates that identify the place
-	// where the uploaded video was recorded. Coordinates are defined using
-	// WGS 84.
-	RecordingLocation *GeoPoint `json:"recordingLocation,omitempty"`
-
 	// VideoStreams: A list of video streams contained in the uploaded video
 	// file. Each item in the list contains detailed metadata about a video
 	// stream.
@@ -8583,6 +8831,22 @@ func (s *VideoFileDetailsVideoStream) MarshalJSON() ([]byte, error) {
 	type noMethod VideoFileDetailsVideoStream
 	raw := noMethod(*s)
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+func (s *VideoFileDetailsVideoStream) UnmarshalJSON(data []byte) error {
+	type noMethod VideoFileDetailsVideoStream
+	var s1 struct {
+		AspectRatio  gensupport.JSONFloat64 `json:"aspectRatio"`
+		FrameRateFps gensupport.JSONFloat64 `json:"frameRateFps"`
+		*noMethod
+	}
+	s1.noMethod = (*noMethod)(s)
+	if err := json.Unmarshal(data, &s1); err != nil {
+		return err
+	}
+	s.AspectRatio = float64(s1.AspectRatio)
+	s.FrameRateFps = float64(s1.FrameRateFps)
+	return nil
 }
 
 type VideoGetRatingResponse struct {
@@ -8816,11 +9080,16 @@ func (s *VideoMonetizationDetails) MarshalJSON() ([]byte, error) {
 
 // VideoPlayer: Player to be used for a video playback.
 type VideoPlayer struct {
+	EmbedHeight int64 `json:"embedHeight,omitempty,string"`
+
 	// EmbedHtml: An <iframe> tag that embeds a player that will play the
 	// video.
 	EmbedHtml string `json:"embedHtml,omitempty"`
 
-	// ForceSendFields is a list of field names (e.g. "EmbedHtml") to
+	// EmbedWidth: The embed width
+	EmbedWidth int64 `json:"embedWidth,omitempty,string"`
+
+	// ForceSendFields is a list of field names (e.g. "EmbedHeight") to
 	// unconditionally include in API requests. By default, fields with
 	// empty values are omitted from API requests. However, any non-pointer,
 	// non-interface field appearing in ForceSendFields will be sent to the
@@ -8828,10 +9097,10 @@ type VideoPlayer struct {
 	// used to include empty fields in Patch requests.
 	ForceSendFields []string `json:"-"`
 
-	// NullFields is a list of field names (e.g. "EmbedHtml") to include in
-	// API requests with the JSON null value. By default, fields with empty
-	// values are omitted from API requests. However, any field with an
-	// empty value appearing in NullFields will be sent to the server as
+	// NullFields is a list of field names (e.g. "EmbedHeight") to include
+	// in API requests with the JSON null value. By default, fields with
+	// empty values are omitted from API requests. However, any field with
+	// an empty value appearing in NullFields will be sent to the server as
 	// null. It is an error if a field in this list has a non-empty value.
 	// This may be used to include null fields in Patch requests.
 	NullFields []string `json:"-"`
@@ -9323,6 +9592,7 @@ type VideoSuggestions struct {
 	//   "imageFile"
 	//   "notAVideoFile"
 	//   "projectFile"
+	//   "unsupportedSpatialAudioLayout"
 	ProcessingErrors []string `json:"processingErrors,omitempty"`
 
 	// ProcessingHints: A list of suggestions that may improve YouTube's
@@ -9331,6 +9601,9 @@ type VideoSuggestions struct {
 	// Possible values:
 	//   "nonStreamableMov"
 	//   "sendBestQualityVideo"
+	//   "spatialAudio"
+	//   "sphericalVideo"
+	//   "vrVideo"
 	ProcessingHints []string `json:"processingHints,omitempty"`
 
 	// ProcessingWarnings: A list of reasons why YouTube may have difficulty
@@ -9349,6 +9622,8 @@ type VideoSuggestions struct {
 	//   "unknownAudioCodec"
 	//   "unknownContainer"
 	//   "unknownVideoCodec"
+	//   "unsupportedSphericalProjectionType"
+	//   "unsupportedVrStereoMode"
 	ProcessingWarnings []string `json:"processingWarnings,omitempty"`
 
 	// TagSuggestions: A list of keyword tags that could be added to the
@@ -9424,6 +9699,10 @@ type VideoTopicDetails struct {
 	// in, or appear in the video. You can retrieve information about each
 	// topic using Freebase Topic API.
 	RelevantTopicIds []string `json:"relevantTopicIds,omitempty"`
+
+	// TopicCategories: A list of Wikipedia URLs that provide a high-level
+	// description of the video's content.
+	TopicCategories []string `json:"topicCategories,omitempty"`
 
 	// TopicIds: A list of Freebase topic IDs that are centrally associated
 	// with the video. These are topics that are centrally featured in the
@@ -9501,6 +9780,7 @@ type ActivitiesInsertCall struct {
 	activity   *Activity
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Insert: Posts a bulletin for a specific channel. (The user submitting
@@ -9536,9 +9816,22 @@ func (c *ActivitiesInsertCall) Context(ctx context.Context) *ActivitiesInsertCal
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *ActivitiesInsertCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *ActivitiesInsertCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.activity)
 	if err != nil {
@@ -9627,6 +9920,7 @@ type ActivitiesListCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // List: Returns a list of channel activity events that match the
@@ -9741,9 +10035,22 @@ func (c *ActivitiesListCall) Context(ctx context.Context) *ActivitiesListCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *ActivitiesListCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *ActivitiesListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -9894,6 +10201,7 @@ type CaptionsDeleteCall struct {
 	s          *Service
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Delete: Deletes a specified caption track.
@@ -9945,9 +10253,22 @@ func (c *CaptionsDeleteCall) Context(ctx context.Context) *CaptionsDeleteCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *CaptionsDeleteCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *CaptionsDeleteCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
 	urls := googleapi.ResolveRelative(c.s.BasePath, "captions")
@@ -10011,6 +10332,7 @@ type CaptionsDownloadCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // Download: Downloads a caption track. The caption track is returned in
@@ -10102,9 +10424,22 @@ func (c *CaptionsDownloadCall) Context(ctx context.Context) *CaptionsDownloadCal
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *CaptionsDownloadCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *CaptionsDownloadCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -10219,6 +10554,7 @@ type CaptionsInsertCall struct {
 	mediaSize_       int64 // mediaSize, if known.  Used only for calls to progressUpdater_.
 	progressUpdater_ googleapi.ProgressUpdater
 	ctx_             context.Context
+	header_          http.Header
 }
 
 // Insert: Uploads a caption track.
@@ -10333,9 +10669,22 @@ func (c *CaptionsInsertCall) Context(ctx context.Context) *CaptionsInsertCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *CaptionsInsertCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *CaptionsInsertCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.caption)
 	if err != nil {
@@ -10506,6 +10855,7 @@ type CaptionsListCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // List: Returns a list of caption tracks that are associated with a
@@ -10580,9 +10930,22 @@ func (c *CaptionsListCall) Context(ctx context.Context) *CaptionsListCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *CaptionsListCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *CaptionsListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -10693,6 +11056,7 @@ type CaptionsUpdateCall struct {
 	mediaSize_       int64 // mediaSize, if known.  Used only for calls to progressUpdater_.
 	progressUpdater_ googleapi.ProgressUpdater
 	ctx_             context.Context
+	header_          http.Header
 }
 
 // Update: Updates a caption track. When updating a caption track, you
@@ -10808,9 +11172,22 @@ func (c *CaptionsUpdateCall) Context(ctx context.Context) *CaptionsUpdateCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *CaptionsUpdateCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *CaptionsUpdateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.caption)
 	if err != nil {
@@ -10986,6 +11363,7 @@ type ChannelBannersInsertCall struct {
 	mediaSize_            int64 // mediaSize, if known.  Used only for calls to progressUpdater_.
 	progressUpdater_      googleapi.ProgressUpdater
 	ctx_                  context.Context
+	header_               http.Header
 }
 
 // Insert: Uploads a channel banner image to YouTube. This method
@@ -11088,9 +11466,22 @@ func (c *ChannelBannersInsertCall) Context(ctx context.Context) *ChannelBannersI
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *ChannelBannersInsertCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *ChannelBannersInsertCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.channelbannerresource)
 	if err != nil {
@@ -11242,6 +11633,7 @@ type ChannelSectionsDeleteCall struct {
 	s          *Service
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Delete: Deletes a channelSection.
@@ -11285,9 +11677,22 @@ func (c *ChannelSectionsDeleteCall) Context(ctx context.Context) *ChannelSection
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *ChannelSectionsDeleteCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *ChannelSectionsDeleteCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
 	urls := googleapi.ResolveRelative(c.s.BasePath, "channelSections")
@@ -11346,6 +11751,7 @@ type ChannelSectionsInsertCall struct {
 	channelsection *ChannelSection
 	urlParams_     gensupport.URLParams
 	ctx_           context.Context
+	header_        http.Header
 }
 
 // Insert: Adds a channelSection for the authenticated user's channel.
@@ -11416,9 +11822,22 @@ func (c *ChannelSectionsInsertCall) Context(ctx context.Context) *ChannelSection
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *ChannelSectionsInsertCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *ChannelSectionsInsertCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.channelsection)
 	if err != nil {
@@ -11518,6 +11937,7 @@ type ChannelSectionsListCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // List: Returns channelSection resources that match the API request
@@ -11610,9 +12030,22 @@ func (c *ChannelSectionsListCall) Context(ctx context.Context) *ChannelSectionsL
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *ChannelSectionsListCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *ChannelSectionsListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -11723,6 +12156,7 @@ type ChannelSectionsUpdateCall struct {
 	channelsection *ChannelSection
 	urlParams_     gensupport.URLParams
 	ctx_           context.Context
+	header_        http.Header
 }
 
 // Update: Update a channelSection.
@@ -11767,9 +12201,22 @@ func (c *ChannelSectionsUpdateCall) Context(ctx context.Context) *ChannelSection
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *ChannelSectionsUpdateCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *ChannelSectionsUpdateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.channelsection)
 	if err != nil {
@@ -11864,6 +12311,7 @@ type ChannelsListCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // List: Returns a collection of zero or more channel resources that
@@ -11997,9 +12445,22 @@ func (c *ChannelsListCall) Context(ctx context.Context) *ChannelsListCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *ChannelsListCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *ChannelsListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -12161,6 +12622,7 @@ type ChannelsUpdateCall struct {
 	channel    *Channel
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Update: Updates a channel's metadata. Note that this method currently
@@ -12204,9 +12666,22 @@ func (c *ChannelsUpdateCall) Context(ctx context.Context) *ChannelsUpdateCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *ChannelsUpdateCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *ChannelsUpdateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.channel)
 	if err != nil {
@@ -12301,6 +12776,7 @@ type CommentThreadsInsertCall struct {
 	commentthread *CommentThread
 	urlParams_    gensupport.URLParams
 	ctx_          context.Context
+	header_       http.Header
 }
 
 // Insert: Creates a new top-level comment. To add a reply to an
@@ -12328,9 +12804,22 @@ func (c *CommentThreadsInsertCall) Context(ctx context.Context) *CommentThreadsI
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *CommentThreadsInsertCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *CommentThreadsInsertCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.commentthread)
 	if err != nil {
@@ -12418,6 +12907,7 @@ type CommentThreadsListCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // List: Returns a list of comment threads that match the API request
@@ -12577,9 +13067,22 @@ func (c *CommentThreadsListCall) Context(ctx context.Context) *CommentThreadsLis
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *CommentThreadsListCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *CommentThreadsListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -12766,6 +13269,7 @@ type CommentThreadsUpdateCall struct {
 	commentthread *CommentThread
 	urlParams_    gensupport.URLParams
 	ctx_          context.Context
+	header_       http.Header
 }
 
 // Update: Modifies the top-level comment in a comment thread.
@@ -12792,9 +13296,22 @@ func (c *CommentThreadsUpdateCall) Context(ctx context.Context) *CommentThreadsU
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *CommentThreadsUpdateCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *CommentThreadsUpdateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.commentthread)
 	if err != nil {
@@ -12881,6 +13398,7 @@ type CommentsDeleteCall struct {
 	s          *Service
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Delete: Deletes a comment.
@@ -12906,9 +13424,22 @@ func (c *CommentsDeleteCall) Context(ctx context.Context) *CommentsDeleteCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *CommentsDeleteCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *CommentsDeleteCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
 	urls := googleapi.ResolveRelative(c.s.BasePath, "comments")
@@ -12960,6 +13491,7 @@ type CommentsInsertCall struct {
 	comment    *Comment
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Insert: Creates a reply to an existing comment. Note: To create a
@@ -12987,9 +13519,22 @@ func (c *CommentsInsertCall) Context(ctx context.Context) *CommentsInsertCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *CommentsInsertCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *CommentsInsertCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.comment)
 	if err != nil {
@@ -13077,6 +13622,7 @@ type CommentsListCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // List: Returns a list of comments that match the API request
@@ -13169,9 +13715,22 @@ func (c *CommentsListCall) Context(ctx context.Context) *CommentsListCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *CommentsListCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *CommentsListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -13312,6 +13871,7 @@ type CommentsMarkAsSpamCall struct {
 	s          *Service
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // MarkAsSpam: Expresses the caller's opinion that one or more comments
@@ -13338,9 +13898,22 @@ func (c *CommentsMarkAsSpamCall) Context(ctx context.Context) *CommentsMarkAsSpa
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *CommentsMarkAsSpamCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *CommentsMarkAsSpamCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
 	urls := googleapi.ResolveRelative(c.s.BasePath, "comments/markAsSpam")
@@ -13391,6 +13964,7 @@ type CommentsSetModerationStatusCall struct {
 	s          *Service
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // SetModerationStatus: Sets the moderation status of one or more
@@ -13431,9 +14005,22 @@ func (c *CommentsSetModerationStatusCall) Context(ctx context.Context) *Comments
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *CommentsSetModerationStatusCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *CommentsSetModerationStatusCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
 	urls := googleapi.ResolveRelative(c.s.BasePath, "comments/setModerationStatus")
@@ -13508,6 +14095,7 @@ type CommentsUpdateCall struct {
 	comment    *Comment
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Update: Modifies a comment.
@@ -13534,9 +14122,22 @@ func (c *CommentsUpdateCall) Context(ctx context.Context) *CommentsUpdateCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *CommentsUpdateCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *CommentsUpdateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.comment)
 	if err != nil {
@@ -13624,6 +14225,7 @@ type FanFundingEventsListCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // List: Lists fan funding events for a channel.
@@ -13692,9 +14294,22 @@ func (c *FanFundingEventsListCall) Context(ctx context.Context) *FanFundingEvent
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *FanFundingEventsListCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *FanFundingEventsListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -13819,6 +14434,7 @@ type GuideCategoriesListCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // List: Returns a list of categories that can be associated with
@@ -13880,9 +14496,22 @@ func (c *GuideCategoriesListCall) Context(ctx context.Context) *GuideCategoriesL
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *GuideCategoriesListCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *GuideCategoriesListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -13984,6 +14613,7 @@ type I18nLanguagesListCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // List: Returns a list of application languages that the YouTube
@@ -14027,9 +14657,22 @@ func (c *I18nLanguagesListCall) Context(ctx context.Context) *I18nLanguagesListC
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *I18nLanguagesListCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *I18nLanguagesListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -14121,6 +14764,7 @@ type I18nRegionsListCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // List: Returns a list of content regions that the YouTube website
@@ -14164,9 +14808,22 @@ func (c *I18nRegionsListCall) Context(ctx context.Context) *I18nRegionsListCall 
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *I18nRegionsListCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *I18nRegionsListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -14257,6 +14914,7 @@ type LiveBroadcastsBindCall struct {
 	s          *Service
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Bind: Binds a YouTube broadcast to a stream or removes an existing
@@ -14339,9 +14997,22 @@ func (c *LiveBroadcastsBindCall) Context(ctx context.Context) *LiveBroadcastsBin
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *LiveBroadcastsBindCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *LiveBroadcastsBindCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
 	urls := googleapi.ResolveRelative(c.s.BasePath, "liveBroadcasts/bind")
@@ -14443,6 +15114,7 @@ type LiveBroadcastsControlCall struct {
 	s          *Service
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Control: Controls the settings for a slate that can be displayed in
@@ -14551,9 +15223,22 @@ func (c *LiveBroadcastsControlCall) Context(ctx context.Context) *LiveBroadcasts
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *LiveBroadcastsControlCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *LiveBroadcastsControlCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
 	urls := googleapi.ResolveRelative(c.s.BasePath, "liveBroadcasts/control")
@@ -14667,6 +15352,7 @@ type LiveBroadcastsDeleteCall struct {
 	s          *Service
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Delete: Deletes a broadcast.
@@ -14736,9 +15422,22 @@ func (c *LiveBroadcastsDeleteCall) Context(ctx context.Context) *LiveBroadcastsD
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *LiveBroadcastsDeleteCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *LiveBroadcastsDeleteCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
 	urls := googleapi.ResolveRelative(c.s.BasePath, "liveBroadcasts")
@@ -14801,6 +15500,7 @@ type LiveBroadcastsInsertCall struct {
 	livebroadcast *LiveBroadcast
 	urlParams_    gensupport.URLParams
 	ctx_          context.Context
+	header_       http.Header
 }
 
 // Insert: Creates a broadcast.
@@ -14871,9 +15571,22 @@ func (c *LiveBroadcastsInsertCall) Context(ctx context.Context) *LiveBroadcastsI
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *LiveBroadcastsInsertCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *LiveBroadcastsInsertCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.livebroadcast)
 	if err != nil {
@@ -14972,6 +15685,7 @@ type LiveBroadcastsListCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // List: Returns a list of YouTube broadcasts that match the API request
@@ -15115,9 +15829,22 @@ func (c *LiveBroadcastsListCall) Context(ctx context.Context) *LiveBroadcastsLis
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *LiveBroadcastsListCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *LiveBroadcastsListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -15289,6 +16016,7 @@ type LiveBroadcastsTransitionCall struct {
 	s          *Service
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Transition: Changes the status of a YouTube live broadcast and
@@ -15366,9 +16094,22 @@ func (c *LiveBroadcastsTransitionCall) Context(ctx context.Context) *LiveBroadca
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *LiveBroadcastsTransitionCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *LiveBroadcastsTransitionCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
 	urls := googleapi.ResolveRelative(c.s.BasePath, "liveBroadcasts/transition")
@@ -15483,6 +16224,7 @@ type LiveBroadcastsUpdateCall struct {
 	livebroadcast *LiveBroadcast
 	urlParams_    gensupport.URLParams
 	ctx_          context.Context
+	header_       http.Header
 }
 
 // Update: Updates a broadcast. For example, you could modify the
@@ -15555,9 +16297,22 @@ func (c *LiveBroadcastsUpdateCall) Context(ctx context.Context) *LiveBroadcastsU
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *LiveBroadcastsUpdateCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *LiveBroadcastsUpdateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.livebroadcast)
 	if err != nil {
@@ -15655,6 +16410,7 @@ type LiveChatBansDeleteCall struct {
 	s          *Service
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Delete: Removes a chat ban.
@@ -15680,9 +16436,22 @@ func (c *LiveChatBansDeleteCall) Context(ctx context.Context) *LiveChatBansDelet
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *LiveChatBansDeleteCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *LiveChatBansDeleteCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
 	urls := googleapi.ResolveRelative(c.s.BasePath, "liveChat/bans")
@@ -15735,6 +16504,7 @@ type LiveChatBansInsertCall struct {
 	livechatban *LiveChatBan
 	urlParams_  gensupport.URLParams
 	ctx_        context.Context
+	header_     http.Header
 }
 
 // Insert: Adds a new ban to the chat.
@@ -15761,9 +16531,22 @@ func (c *LiveChatBansInsertCall) Context(ctx context.Context) *LiveChatBansInser
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *LiveChatBansInsertCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *LiveChatBansInsertCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.livechatban)
 	if err != nil {
@@ -15851,6 +16634,7 @@ type LiveChatMessagesDeleteCall struct {
 	s          *Service
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Delete: Deletes a chat message.
@@ -15876,9 +16660,22 @@ func (c *LiveChatMessagesDeleteCall) Context(ctx context.Context) *LiveChatMessa
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *LiveChatMessagesDeleteCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *LiveChatMessagesDeleteCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
 	urls := googleapi.ResolveRelative(c.s.BasePath, "liveChat/messages")
@@ -15931,6 +16728,7 @@ type LiveChatMessagesInsertCall struct {
 	livechatmessage *LiveChatMessage
 	urlParams_      gensupport.URLParams
 	ctx_            context.Context
+	header_         http.Header
 }
 
 // Insert: Adds a message to a live chat.
@@ -15957,9 +16755,22 @@ func (c *LiveChatMessagesInsertCall) Context(ctx context.Context) *LiveChatMessa
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *LiveChatMessagesInsertCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *LiveChatMessagesInsertCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.livechatmessage)
 	if err != nil {
@@ -16048,6 +16859,7 @@ type LiveChatMessagesListCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // List: Lists live chat messages for a specific chat.
@@ -16125,9 +16937,22 @@ func (c *LiveChatMessagesListCall) Context(ctx context.Context) *LiveChatMessage
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *LiveChatMessagesListCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *LiveChatMessagesListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -16266,6 +17091,7 @@ type LiveChatModeratorsDeleteCall struct {
 	s          *Service
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Delete: Removes a chat moderator.
@@ -16291,9 +17117,22 @@ func (c *LiveChatModeratorsDeleteCall) Context(ctx context.Context) *LiveChatMod
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *LiveChatModeratorsDeleteCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *LiveChatModeratorsDeleteCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
 	urls := googleapi.ResolveRelative(c.s.BasePath, "liveChat/moderators")
@@ -16346,6 +17185,7 @@ type LiveChatModeratorsInsertCall struct {
 	livechatmoderator *LiveChatModerator
 	urlParams_        gensupport.URLParams
 	ctx_              context.Context
+	header_           http.Header
 }
 
 // Insert: Adds a new moderator for the chat.
@@ -16372,9 +17212,22 @@ func (c *LiveChatModeratorsInsertCall) Context(ctx context.Context) *LiveChatMod
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *LiveChatModeratorsInsertCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *LiveChatModeratorsInsertCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.livechatmoderator)
 	if err != nil {
@@ -16463,6 +17316,7 @@ type LiveChatModeratorsListCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // List: Lists moderators for a live chat.
@@ -16516,9 +17370,22 @@ func (c *LiveChatModeratorsListCall) Context(ctx context.Context) *LiveChatModer
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *LiveChatModeratorsListCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *LiveChatModeratorsListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -16644,6 +17511,7 @@ type LiveStreamsDeleteCall struct {
 	s          *Service
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Delete: Deletes a video stream.
@@ -16713,9 +17581,22 @@ func (c *LiveStreamsDeleteCall) Context(ctx context.Context) *LiveStreamsDeleteC
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *LiveStreamsDeleteCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *LiveStreamsDeleteCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
 	urls := googleapi.ResolveRelative(c.s.BasePath, "liveStreams")
@@ -16778,6 +17659,7 @@ type LiveStreamsInsertCall struct {
 	livestream *LiveStream
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Insert: Creates a video stream. The stream enables you to send your
@@ -16850,9 +17732,22 @@ func (c *LiveStreamsInsertCall) Context(ctx context.Context) *LiveStreamsInsertC
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *LiveStreamsInsertCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *LiveStreamsInsertCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.livestream)
 	if err != nil {
@@ -16951,6 +17846,7 @@ type LiveStreamsListCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // List: Returns a list of video streams that match the API request
@@ -17066,9 +17962,22 @@ func (c *LiveStreamsListCall) Context(ctx context.Context) *LiveStreamsListCall 
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *LiveStreamsListCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *LiveStreamsListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -17208,6 +18117,7 @@ type LiveStreamsUpdateCall struct {
 	livestream *LiveStream
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Update: Updates a video stream. If the properties that you want to
@@ -17280,9 +18190,22 @@ func (c *LiveStreamsUpdateCall) Context(ctx context.Context) *LiveStreamsUpdateC
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *LiveStreamsUpdateCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *LiveStreamsUpdateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.livestream)
 	if err != nil {
@@ -17380,12 +18303,31 @@ type PlaylistItemsDeleteCall struct {
 	s          *Service
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Delete: Deletes a playlist item.
 func (r *PlaylistItemsService) Delete(id string) *PlaylistItemsDeleteCall {
 	c := &PlaylistItemsDeleteCall{s: r.s, urlParams_: make(gensupport.URLParams)}
 	c.urlParams_.Set("id", id)
+	return c
+}
+
+// OnBehalfOfContentOwner sets the optional parameter
+// "onBehalfOfContentOwner": Note: This parameter is intended
+// exclusively for YouTube content partners.
+//
+// The onBehalfOfContentOwner parameter indicates that the request's
+// authorization credentials identify a YouTube CMS user who is acting
+// on behalf of the content owner specified in the parameter value. This
+// parameter is intended for YouTube content partners that own and
+// manage many different YouTube channels. It allows content owners to
+// authenticate once and get access to all their video and channel data,
+// without having to provide authentication credentials for each
+// individual channel. The CMS account that the user authenticates with
+// must be linked to the specified YouTube content owner.
+func (c *PlaylistItemsDeleteCall) OnBehalfOfContentOwner(onBehalfOfContentOwner string) *PlaylistItemsDeleteCall {
+	c.urlParams_.Set("onBehalfOfContentOwner", onBehalfOfContentOwner)
 	return c
 }
 
@@ -17405,9 +18347,22 @@ func (c *PlaylistItemsDeleteCall) Context(ctx context.Context) *PlaylistItemsDel
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *PlaylistItemsDeleteCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *PlaylistItemsDeleteCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
 	urls := googleapi.ResolveRelative(c.s.BasePath, "playlistItems")
@@ -17442,6 +18397,11 @@ func (c *PlaylistItemsDeleteCall) Do(opts ...googleapi.CallOption) error {
 	//       "location": "query",
 	//       "required": true,
 	//       "type": "string"
+	//     },
+	//     "onBehalfOfContentOwner": {
+	//       "description": "Note: This parameter is intended exclusively for YouTube content partners.\n\nThe onBehalfOfContentOwner parameter indicates that the request's authorization credentials identify a YouTube CMS user who is acting on behalf of the content owner specified in the parameter value. This parameter is intended for YouTube content partners that own and manage many different YouTube channels. It allows content owners to authenticate once and get access to all their video and channel data, without having to provide authentication credentials for each individual channel. The CMS account that the user authenticates with must be linked to the specified YouTube content owner.",
+	//       "location": "query",
+	//       "type": "string"
 	//     }
 	//   },
 	//   "path": "playlistItems",
@@ -17461,6 +18421,7 @@ type PlaylistItemsInsertCall struct {
 	playlistitem *PlaylistItem
 	urlParams_   gensupport.URLParams
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // Insert: Adds a resource to a playlist.
@@ -17505,9 +18466,22 @@ func (c *PlaylistItemsInsertCall) Context(ctx context.Context) *PlaylistItemsIns
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *PlaylistItemsInsertCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *PlaylistItemsInsertCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.playlistitem)
 	if err != nil {
@@ -17602,6 +18576,7 @@ type PlaylistItemsListCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // List: Returns a collection of playlist items that match the API
@@ -17700,9 +18675,22 @@ func (c *PlaylistItemsListCall) Context(ctx context.Context) *PlaylistItemsListC
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *PlaylistItemsListCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *PlaylistItemsListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -17844,6 +18832,7 @@ type PlaylistItemsUpdateCall struct {
 	playlistitem *PlaylistItem
 	urlParams_   gensupport.URLParams
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // Update: Modifies a playlist item. For example, you could update the
@@ -17852,6 +18841,24 @@ func (r *PlaylistItemsService) Update(part string, playlistitem *PlaylistItem) *
 	c := &PlaylistItemsUpdateCall{s: r.s, urlParams_: make(gensupport.URLParams)}
 	c.urlParams_.Set("part", part)
 	c.playlistitem = playlistitem
+	return c
+}
+
+// OnBehalfOfContentOwner sets the optional parameter
+// "onBehalfOfContentOwner": Note: This parameter is intended
+// exclusively for YouTube content partners.
+//
+// The onBehalfOfContentOwner parameter indicates that the request's
+// authorization credentials identify a YouTube CMS user who is acting
+// on behalf of the content owner specified in the parameter value. This
+// parameter is intended for YouTube content partners that own and
+// manage many different YouTube channels. It allows content owners to
+// authenticate once and get access to all their video and channel data,
+// without having to provide authentication credentials for each
+// individual channel. The CMS account that the user authenticates with
+// must be linked to the specified YouTube content owner.
+func (c *PlaylistItemsUpdateCall) OnBehalfOfContentOwner(onBehalfOfContentOwner string) *PlaylistItemsUpdateCall {
+	c.urlParams_.Set("onBehalfOfContentOwner", onBehalfOfContentOwner)
 	return c
 }
 
@@ -17871,9 +18878,22 @@ func (c *PlaylistItemsUpdateCall) Context(ctx context.Context) *PlaylistItemsUpd
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *PlaylistItemsUpdateCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *PlaylistItemsUpdateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.playlistitem)
 	if err != nil {
@@ -17933,6 +18953,11 @@ func (c *PlaylistItemsUpdateCall) Do(opts ...googleapi.CallOption) (*PlaylistIte
 	//     "part"
 	//   ],
 	//   "parameters": {
+	//     "onBehalfOfContentOwner": {
+	//       "description": "Note: This parameter is intended exclusively for YouTube content partners.\n\nThe onBehalfOfContentOwner parameter indicates that the request's authorization credentials identify a YouTube CMS user who is acting on behalf of the content owner specified in the parameter value. This parameter is intended for YouTube content partners that own and manage many different YouTube channels. It allows content owners to authenticate once and get access to all their video and channel data, without having to provide authentication credentials for each individual channel. The CMS account that the user authenticates with must be linked to the specified YouTube content owner.",
+	//       "location": "query",
+	//       "type": "string"
+	//     },
 	//     "part": {
 	//       "description": "The part parameter serves two purposes in this operation. It identifies the properties that the write operation will set as well as the properties that the API response will include.\n\nNote that this method will override the existing values for all of the mutable properties that are contained in any parts that the parameter value specifies. For example, a playlist item can specify a start time and end time, which identify the times portion of the video that should play when users watch the video in the playlist. If your request is updating a playlist item that sets these values, and the request's part parameter value includes the contentDetails part, the playlist item's start and end times will be updated to whatever value the request body specifies. If the request body does not specify values, the existing start and end times will be removed and replaced with the default settings.",
 	//       "location": "query",
@@ -17962,6 +18987,7 @@ type PlaylistsDeleteCall struct {
 	s          *Service
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Delete: Deletes a playlist.
@@ -18005,9 +19031,22 @@ func (c *PlaylistsDeleteCall) Context(ctx context.Context) *PlaylistsDeleteCall 
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *PlaylistsDeleteCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *PlaylistsDeleteCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
 	urls := googleapi.ResolveRelative(c.s.BasePath, "playlists")
@@ -18066,6 +19105,7 @@ type PlaylistsInsertCall struct {
 	playlist   *Playlist
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Insert: Creates a playlist.
@@ -18136,9 +19176,22 @@ func (c *PlaylistsInsertCall) Context(ctx context.Context) *PlaylistsInsertCall 
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *PlaylistsInsertCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *PlaylistsInsertCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.playlist)
 	if err != nil {
@@ -18238,6 +19291,7 @@ type PlaylistsListCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // List: Returns a collection of playlists that match the API request
@@ -18370,9 +19424,22 @@ func (c *PlaylistsListCall) Context(ctx context.Context) *PlaylistsListCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *PlaylistsListCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *PlaylistsListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -18523,6 +19590,7 @@ type PlaylistsUpdateCall struct {
 	playlist   *Playlist
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Update: Modifies a playlist. For example, you could change a
@@ -18568,9 +19636,22 @@ func (c *PlaylistsUpdateCall) Context(ctx context.Context) *PlaylistsUpdateCall 
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *PlaylistsUpdateCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *PlaylistsUpdateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.playlist)
 	if err != nil {
@@ -18665,6 +19746,7 @@ type SearchListCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // List: Returns a collection of search results that match the query
@@ -19103,9 +20185,22 @@ func (c *SearchListCall) Context(ctx context.Context) *SearchListCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *SearchListCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *SearchListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -19492,6 +20587,7 @@ type SponsorsListCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // List: Lists sponsors for a channel.
@@ -19555,9 +20651,22 @@ func (c *SponsorsListCall) Context(ctx context.Context) *SponsorsListCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *SponsorsListCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *SponsorsListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -19690,6 +20799,7 @@ type SubscriptionsDeleteCall struct {
 	s          *Service
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Delete: Deletes a subscription.
@@ -19715,9 +20825,22 @@ func (c *SubscriptionsDeleteCall) Context(ctx context.Context) *SubscriptionsDel
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *SubscriptionsDeleteCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *SubscriptionsDeleteCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
 	urls := googleapi.ResolveRelative(c.s.BasePath, "subscriptions")
@@ -19771,6 +20894,7 @@ type SubscriptionsInsertCall struct {
 	subscription *Subscription
 	urlParams_   gensupport.URLParams
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // Insert: Adds a subscription for the authenticated user's channel.
@@ -19797,9 +20921,22 @@ func (c *SubscriptionsInsertCall) Context(ctx context.Context) *SubscriptionsIns
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *SubscriptionsInsertCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *SubscriptionsInsertCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.subscription)
 	if err != nil {
@@ -19889,6 +21026,7 @@ type SubscriptionsListCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // List: Returns subscription resources that match the API request
@@ -20049,9 +21187,22 @@ func (c *SubscriptionsListCall) Context(ctx context.Context) *SubscriptionsListC
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *SubscriptionsListCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *SubscriptionsListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -20221,6 +21372,215 @@ func (c *SubscriptionsListCall) Pages(ctx context.Context, f func(*SubscriptionL
 	}
 }
 
+// method id "youtube.superChatEvents.list":
+
+type SuperChatEventsListCall struct {
+	s            *Service
+	urlParams_   gensupport.URLParams
+	ifNoneMatch_ string
+	ctx_         context.Context
+	header_      http.Header
+}
+
+// List: Lists Super Chat events for a channel.
+func (r *SuperChatEventsService) List(part string) *SuperChatEventsListCall {
+	c := &SuperChatEventsListCall{s: r.s, urlParams_: make(gensupport.URLParams)}
+	c.urlParams_.Set("part", part)
+	return c
+}
+
+// Hl sets the optional parameter "hl": The hl parameter instructs the
+// API to retrieve localized resource metadata for a specific
+// application language that the YouTube website supports. The parameter
+// value must be a language code included in the list returned by the
+// i18nLanguages.list method.
+//
+// If localized resource details are available in that language, the
+// resource's snippet.localized object will contain the localized
+// values. However, if localized details are not available, the
+// snippet.localized object will contain resource details in the
+// resource's default language.
+func (c *SuperChatEventsListCall) Hl(hl string) *SuperChatEventsListCall {
+	c.urlParams_.Set("hl", hl)
+	return c
+}
+
+// MaxResults sets the optional parameter "maxResults": The maxResults
+// parameter specifies the maximum number of items that should be
+// returned in the result set.
+func (c *SuperChatEventsListCall) MaxResults(maxResults int64) *SuperChatEventsListCall {
+	c.urlParams_.Set("maxResults", fmt.Sprint(maxResults))
+	return c
+}
+
+// PageToken sets the optional parameter "pageToken": The pageToken
+// parameter identifies a specific page in the result set that should be
+// returned. In an API response, the nextPageToken and prevPageToken
+// properties identify other pages that could be retrieved.
+func (c *SuperChatEventsListCall) PageToken(pageToken string) *SuperChatEventsListCall {
+	c.urlParams_.Set("pageToken", pageToken)
+	return c
+}
+
+// Fields allows partial responses to be retrieved. See
+// https://developers.google.com/gdata/docs/2.0/basics#PartialResponse
+// for more information.
+func (c *SuperChatEventsListCall) Fields(s ...googleapi.Field) *SuperChatEventsListCall {
+	c.urlParams_.Set("fields", googleapi.CombineFields(s))
+	return c
+}
+
+// IfNoneMatch sets the optional parameter which makes the operation
+// fail if the object's ETag matches the given value. This is useful for
+// getting updates only after the object has changed since the last
+// request. Use googleapi.IsNotModified to check whether the response
+// error from Do is the result of In-None-Match.
+func (c *SuperChatEventsListCall) IfNoneMatch(entityTag string) *SuperChatEventsListCall {
+	c.ifNoneMatch_ = entityTag
+	return c
+}
+
+// Context sets the context to be used in this call's Do method. Any
+// pending HTTP request will be aborted if the provided context is
+// canceled.
+func (c *SuperChatEventsListCall) Context(ctx context.Context) *SuperChatEventsListCall {
+	c.ctx_ = ctx
+	return c
+}
+
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *SuperChatEventsListCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
+func (c *SuperChatEventsListCall) doRequest(alt string) (*http.Response, error) {
+	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
+	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
+	if c.ifNoneMatch_ != "" {
+		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
+	}
+	var body io.Reader = nil
+	c.urlParams_.Set("alt", alt)
+	urls := googleapi.ResolveRelative(c.s.BasePath, "superChatEvents")
+	urls += "?" + c.urlParams_.Encode()
+	req, _ := http.NewRequest("GET", urls, body)
+	req.Header = reqHeaders
+	return gensupport.SendRequest(c.ctx_, c.s.client, req)
+}
+
+// Do executes the "youtube.superChatEvents.list" call.
+// Exactly one of *SuperChatEventListResponse or error will be non-nil.
+// Any non-2xx status code is an error. Response headers are in either
+// *SuperChatEventListResponse.ServerResponse.Header or (if a response
+// was returned at all) in error.(*googleapi.Error).Header. Use
+// googleapi.IsNotModified to check whether the returned error was
+// because http.StatusNotModified was returned.
+func (c *SuperChatEventsListCall) Do(opts ...googleapi.CallOption) (*SuperChatEventListResponse, error) {
+	gensupport.SetOptions(c.urlParams_, opts...)
+	res, err := c.doRequest("json")
+	if res != nil && res.StatusCode == http.StatusNotModified {
+		if res.Body != nil {
+			res.Body.Close()
+		}
+		return nil, &googleapi.Error{
+			Code:   res.StatusCode,
+			Header: res.Header,
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer googleapi.CloseBody(res)
+	if err := googleapi.CheckResponse(res); err != nil {
+		return nil, err
+	}
+	ret := &SuperChatEventListResponse{
+		ServerResponse: googleapi.ServerResponse{
+			Header:         res.Header,
+			HTTPStatusCode: res.StatusCode,
+		},
+	}
+	target := &ret
+	if err := json.NewDecoder(res.Body).Decode(target); err != nil {
+		return nil, err
+	}
+	return ret, nil
+	// {
+	//   "description": "Lists Super Chat events for a channel.",
+	//   "httpMethod": "GET",
+	//   "id": "youtube.superChatEvents.list",
+	//   "parameterOrder": [
+	//     "part"
+	//   ],
+	//   "parameters": {
+	//     "hl": {
+	//       "description": "The hl parameter instructs the API to retrieve localized resource metadata for a specific application language that the YouTube website supports. The parameter value must be a language code included in the list returned by the i18nLanguages.list method.\n\nIf localized resource details are available in that language, the resource's snippet.localized object will contain the localized values. However, if localized details are not available, the snippet.localized object will contain resource details in the resource's default language.",
+	//       "location": "query",
+	//       "type": "string"
+	//     },
+	//     "maxResults": {
+	//       "default": "5",
+	//       "description": "The maxResults parameter specifies the maximum number of items that should be returned in the result set.",
+	//       "format": "uint32",
+	//       "location": "query",
+	//       "maximum": "50",
+	//       "minimum": "0",
+	//       "type": "integer"
+	//     },
+	//     "pageToken": {
+	//       "description": "The pageToken parameter identifies a specific page in the result set that should be returned. In an API response, the nextPageToken and prevPageToken properties identify other pages that could be retrieved.",
+	//       "location": "query",
+	//       "type": "string"
+	//     },
+	//     "part": {
+	//       "description": "The part parameter specifies the superChatEvent resource parts that the API response will include. Supported values are id and snippet.",
+	//       "location": "query",
+	//       "required": true,
+	//       "type": "string"
+	//     }
+	//   },
+	//   "path": "superChatEvents",
+	//   "response": {
+	//     "$ref": "SuperChatEventListResponse"
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/youtube",
+	//     "https://www.googleapis.com/auth/youtube.force-ssl",
+	//     "https://www.googleapis.com/auth/youtube.readonly"
+	//   ]
+	// }
+
+}
+
+// Pages invokes f for each page of results.
+// A non-nil error returned from f will halt the iteration.
+// The provided context supersedes any context provided to the Context method.
+func (c *SuperChatEventsListCall) Pages(ctx context.Context, f func(*SuperChatEventListResponse) error) error {
+	c.ctx_ = ctx
+	defer c.PageToken(c.urlParams_.Get("pageToken")) // reset paging to original point
+	for {
+		x, err := c.Do()
+		if err != nil {
+			return err
+		}
+		if err := f(x); err != nil {
+			return err
+		}
+		if x.NextPageToken == "" {
+			return nil
+		}
+		c.PageToken(x.NextPageToken)
+	}
+}
+
 // method id "youtube.thumbnails.set":
 
 type ThumbnailsSetCall struct {
@@ -20232,6 +21592,7 @@ type ThumbnailsSetCall struct {
 	mediaSize_       int64 // mediaSize, if known.  Used only for calls to progressUpdater_.
 	progressUpdater_ googleapi.ProgressUpdater
 	ctx_             context.Context
+	header_          http.Header
 }
 
 // Set: Uploads a custom video thumbnail to YouTube and sets it for a
@@ -20325,9 +21686,22 @@ func (c *ThumbnailsSetCall) Context(ctx context.Context) *ThumbnailsSetCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *ThumbnailsSetCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *ThumbnailsSetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
 	urls := googleapi.ResolveRelative(c.s.BasePath, "thumbnails/set")
@@ -20482,6 +21856,7 @@ type VideoAbuseReportReasonsListCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // List: Returns a list of abuse reasons that can be used for reporting
@@ -20525,9 +21900,22 @@ func (c *VideoAbuseReportReasonsListCall) Context(ctx context.Context) *VideoAbu
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *VideoAbuseReportReasonsListCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *VideoAbuseReportReasonsListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -20619,6 +22007,7 @@ type VideoCategoriesListCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // List: Returns a list of categories that can be associated with
@@ -20679,9 +22068,22 @@ func (c *VideoCategoriesListCall) Context(ctx context.Context) *VideoCategoriesL
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *VideoCategoriesListCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *VideoCategoriesListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -20782,6 +22184,7 @@ type VideosDeleteCall struct {
 	s          *Service
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Delete: Deletes a YouTube video.
@@ -20826,9 +22229,22 @@ func (c *VideosDeleteCall) Context(ctx context.Context) *VideosDeleteCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *VideosDeleteCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *VideosDeleteCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
 	urls := googleapi.ResolveRelative(c.s.BasePath, "videos")
@@ -20887,6 +22303,7 @@ type VideosGetRatingCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // GetRating: Retrieves the ratings that the authorized user gave to a
@@ -20941,9 +22358,22 @@ func (c *VideosGetRatingCall) Context(ctx context.Context) *VideosGetRatingCall 
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *VideosGetRatingCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *VideosGetRatingCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -21038,6 +22468,7 @@ type VideosInsertCall struct {
 	mediaSize_       int64 // mediaSize, if known.  Used only for calls to progressUpdater_.
 	progressUpdater_ googleapi.ProgressUpdater
 	ctx_             context.Context
+	header_          http.Header
 }
 
 // Insert: Uploads a video to YouTube and optionally sets the video's
@@ -21186,9 +22617,22 @@ func (c *VideosInsertCall) Context(ctx context.Context) *VideosInsertCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *VideosInsertCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *VideosInsertCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.video)
 	if err != nil {
@@ -21371,6 +22815,7 @@ type VideosListCall struct {
 	urlParams_   gensupport.URLParams
 	ifNoneMatch_ string
 	ctx_         context.Context
+	header_      http.Header
 }
 
 // List: Returns a list of videos that match the API request parameters.
@@ -21422,15 +22867,33 @@ func (c *VideosListCall) Locale(locale string) *VideosListCall {
 	return c
 }
 
+// MaxHeight sets the optional parameter "maxHeight": The maxHeight
+// parameter specifies a maximum height of the embedded player. If
+// maxWidth is provided, maxHeight may not be reached in order to not
+// violate the width request.
+func (c *VideosListCall) MaxHeight(maxHeight int64) *VideosListCall {
+	c.urlParams_.Set("maxHeight", fmt.Sprint(maxHeight))
+	return c
+}
+
 // MaxResults sets the optional parameter "maxResults": The maxResults
 // parameter specifies the maximum number of items that should be
 // returned in the result set.
 //
 // Note: This parameter is supported for use in conjunction with the
-// myRating parameter, but it is not supported for use in conjunction
-// with the id parameter.
+// myRating and chart parameters, but it is not supported for use in
+// conjunction with the id parameter.
 func (c *VideosListCall) MaxResults(maxResults int64) *VideosListCall {
 	c.urlParams_.Set("maxResults", fmt.Sprint(maxResults))
+	return c
+}
+
+// MaxWidth sets the optional parameter "maxWidth": The maxWidth
+// parameter specifies a maximum width of the embedded player. If
+// maxHeight is provided, maxWidth may not be reached in order to not
+// violate the height request.
+func (c *VideosListCall) MaxWidth(maxWidth int64) *VideosListCall {
+	c.urlParams_.Set("maxWidth", fmt.Sprint(maxWidth))
 	return c
 }
 
@@ -21470,8 +22933,8 @@ func (c *VideosListCall) OnBehalfOfContentOwner(onBehalfOfContentOwner string) *
 // properties identify other pages that could be retrieved.
 //
 // Note: This parameter is supported for use in conjunction with the
-// myRating parameter, but it is not supported for use in conjunction
-// with the id parameter.
+// myRating and chart parameters, but it is not supported for use in
+// conjunction with the id parameter.
 func (c *VideosListCall) PageToken(pageToken string) *VideosListCall {
 	c.urlParams_.Set("pageToken", pageToken)
 	return c
@@ -21523,9 +22986,22 @@ func (c *VideosListCall) Context(ctx context.Context) *VideosListCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *VideosListCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *VideosListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	if c.ifNoneMatch_ != "" {
 		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
 	}
@@ -21609,13 +23085,29 @@ func (c *VideosListCall) Do(opts ...googleapi.CallOption) (*VideoListResponse, e
 	//       "location": "query",
 	//       "type": "string"
 	//     },
+	//     "maxHeight": {
+	//       "description": "The maxHeight parameter specifies a maximum height of the embedded player. If maxWidth is provided, maxHeight may not be reached in order to not violate the width request.",
+	//       "format": "uint32",
+	//       "location": "query",
+	//       "maximum": "8192",
+	//       "minimum": "72",
+	//       "type": "integer"
+	//     },
 	//     "maxResults": {
 	//       "default": "5",
-	//       "description": "The maxResults parameter specifies the maximum number of items that should be returned in the result set.\n\nNote: This parameter is supported for use in conjunction with the myRating parameter, but it is not supported for use in conjunction with the id parameter.",
+	//       "description": "The maxResults parameter specifies the maximum number of items that should be returned in the result set.\n\nNote: This parameter is supported for use in conjunction with the myRating and chart parameters, but it is not supported for use in conjunction with the id parameter.",
 	//       "format": "uint32",
 	//       "location": "query",
 	//       "maximum": "50",
 	//       "minimum": "1",
+	//       "type": "integer"
+	//     },
+	//     "maxWidth": {
+	//       "description": "The maxWidth parameter specifies a maximum width of the embedded player. If maxHeight is provided, maxWidth may not be reached in order to not violate the height request.",
+	//       "format": "uint32",
+	//       "location": "query",
+	//       "maximum": "8192",
+	//       "minimum": "72",
 	//       "type": "integer"
 	//     },
 	//     "myRating": {
@@ -21637,7 +23129,7 @@ func (c *VideosListCall) Do(opts ...googleapi.CallOption) (*VideoListResponse, e
 	//       "type": "string"
 	//     },
 	//     "pageToken": {
-	//       "description": "The pageToken parameter identifies a specific page in the result set that should be returned. In an API response, the nextPageToken and prevPageToken properties identify other pages that could be retrieved.\n\nNote: This parameter is supported for use in conjunction with the myRating parameter, but it is not supported for use in conjunction with the id parameter.",
+	//       "description": "The pageToken parameter identifies a specific page in the result set that should be returned. In an API response, the nextPageToken and prevPageToken properties identify other pages that could be retrieved.\n\nNote: This parameter is supported for use in conjunction with the myRating and chart parameters, but it is not supported for use in conjunction with the id parameter.",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -21700,6 +23192,7 @@ type VideosRateCall struct {
 	s          *Service
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Rate: Add a like or dislike rating to a video or remove a rating from
@@ -21727,9 +23220,22 @@ func (c *VideosRateCall) Context(ctx context.Context) *VideosRateCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *VideosRateCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *VideosRateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
 	urls := googleapi.ResolveRelative(c.s.BasePath, "videos/rate")
@@ -21800,6 +23306,7 @@ type VideosReportAbuseCall struct {
 	videoabusereport *VideoAbuseReport
 	urlParams_       gensupport.URLParams
 	ctx_             context.Context
+	header_          http.Header
 }
 
 // ReportAbuse: Report abuse for a video.
@@ -21843,9 +23350,22 @@ func (c *VideosReportAbuseCall) Context(ctx context.Context) *VideosReportAbuseC
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *VideosReportAbuseCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *VideosReportAbuseCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.videoabusereport)
 	if err != nil {
@@ -21903,6 +23423,7 @@ type VideosUpdateCall struct {
 	video      *Video
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Update: Updates a video's metadata.
@@ -21948,9 +23469,22 @@ func (c *VideosUpdateCall) Context(ctx context.Context) *VideosUpdateCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *VideosUpdateCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *VideosUpdateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.video)
 	if err != nil {
@@ -22050,6 +23584,7 @@ type WatermarksSetCall struct {
 	mediaSize_       int64 // mediaSize, if known.  Used only for calls to progressUpdater_.
 	progressUpdater_ googleapi.ProgressUpdater
 	ctx_             context.Context
+	header_          http.Header
 }
 
 // Set: Uploads a watermark image to YouTube and sets it for a channel.
@@ -22142,9 +23677,22 @@ func (c *WatermarksSetCall) Context(ctx context.Context) *WatermarksSetCall {
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *WatermarksSetCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *WatermarksSetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	body, err := googleapi.WithoutDataWrapper.JSONReader(c.invideobranding)
 	if err != nil {
@@ -22278,6 +23826,7 @@ type WatermarksUnsetCall struct {
 	s          *Service
 	urlParams_ gensupport.URLParams
 	ctx_       context.Context
+	header_    http.Header
 }
 
 // Unset: Deletes a channel's watermark image.
@@ -22321,9 +23870,22 @@ func (c *WatermarksUnsetCall) Context(ctx context.Context) *WatermarksUnsetCall 
 	return c
 }
 
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *WatermarksUnsetCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
 func (c *WatermarksUnsetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
 	reqHeaders.Set("User-Agent", c.s.userAgent())
+	reqHeaders.Set("x-goog-api-client", c.s.clientHeader())
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
 	urls := googleapi.ResolveRelative(c.s.BasePath, "watermarks/unset")
