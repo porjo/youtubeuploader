@@ -64,6 +64,11 @@ type VideoMeta struct {
 
 	// BCP-47 language code e.g. 'en','es'
 	Language string `json:"language,omitempty"`
+
+	Monetization struct {
+		Allowed         bool     `json:"allowed,omitempty"`
+		ExcludedRegions []string `json:"excluded_regions,omitempty"`
+	} `json:"monetization,omitempty"`
 }
 
 func (t *limitTransport) RoundTrip(r *http.Request) (res *http.Response, err error) {

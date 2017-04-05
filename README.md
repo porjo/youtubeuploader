@@ -125,6 +125,10 @@ Video title, description etc can specified via the command line flags or via a J
   "playlistIds":  ["xxxxxxxxxxxxxxxxxx", "yyyyyyyyyyyyyyyyyy"],
   "playlistTitles":  ["my test playlist"],
   "language":  "fr"
+  "monetization": {
+     "allowed": true,
+     "excluded_regions": ["CH","AF"]
+  }
 }
 ```
 - all fields are optional. Command line flags will be used by default (where available)

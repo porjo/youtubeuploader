@@ -98,6 +98,13 @@ func LoadVideoMeta(filename string, video *youtube.Video) (videoMeta VideoMeta) 
 			video.Snippet.DefaultLanguage = videoMeta.Language
 			video.Snippet.DefaultAudioLanguage = videoMeta.Language
 		}
+		if videoMeta.Monetization.Allowed {
+			video.MonetizationDetails = &youtube.VideoMonetizationDetails{}
+			video.MonetizationDetails.Access = &youtube.AccessPolicy{
+				Allowed:   true,
+				Exception: videoMeta.Monetization.ExcludedRegions,
+			}
+		}
 	}
 errJump:
 

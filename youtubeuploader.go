@@ -157,6 +157,7 @@ func main() {
 	if upload.Snippet.DefaultAudioLanguage == "" && *language != "" {
 		upload.Snippet.DefaultAudioLanguage = *language
 	}
+	fmt.Printf("meta %+v\n", upload.MonetizationDetails.Access)
 
 	fmt.Printf("Uploading file '%s'...\n", *filename)
 
