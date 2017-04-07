@@ -50,6 +50,7 @@ type Snippet struct {
 	Title         string   `json:"title,omitempty"`
 	Description   string   `json:"description,omitempty"`
 	CategoryId    string   `json:"categoryId,omitempty"`
+	ChannelId     string   `json:"channelId,omitempty"`
 	PrivacyStatus string   `json:"privacyStatus,omitempty"`
 	Tags          []string `json:"tags,omitempty"`
 }
@@ -120,9 +121,9 @@ func main() {
 						s := transport.reader.Monitor.Status()
 						curRate := float32(s.CurRate)
 						if curRate >= 125000 {
-							fmt.Printf("\rProgress: %8.2f Mbps, %d / %d (%s) ETA %8s", curRate/125000, s.Bytes, filesize, s.Progress, s.TimeRem)
+							fmt.Printf("\rProgress: %8.2f Mbps, %d / %d (%s) ETA %11s", curRate/125000, s.Bytes, filesize, s.Progress, s.TimeRem)
 						} else {
-							fmt.Printf("\rProgress: %8.2f kbps, %d / %d (%s) ETA %8s", curRate/125, s.Bytes, filesize, s.Progress, s.TimeRem)
+							fmt.Printf("\rProgress: %8.2f kbps, %d / %d (%s) ETA %11s", curRate/125, s.Bytes, filesize, s.Progress, s.TimeRem)
 						}
 					}
 				case <-quitChan:
@@ -165,6 +166,7 @@ func main() {
 		upload.Snippet.Title = snippet.Title
 		upload.Snippet.Description = snippet.Description
 		upload.Snippet.CategoryId = snippet.CategoryId
+		upload.Snippet.ChannelId = snippet.ChannelId
 		upload.Status.PrivacyStatus = snippet.PrivacyStatus
 	}
 
@@ -181,7 +183,7 @@ func main() {
 		upload.Snippet.Description = *description
 	}
 	if upload.Snippet.CategoryId == "" && *categoryId != "" {
-		upload.Snippet.Title = *categoryId
+		upload.Snippet.CategoryId = *categoryId
 	}
 
 	call := service.Videos.Insert("snippet,status", upload)
