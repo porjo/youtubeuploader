@@ -7,7 +7,7 @@ Scripted uploads to youtube.
 
 ## Download
 
-Grab a [precompiled binary](https://github.com/porjo/youtubeuploader/releases) for Linux or build it yourself.
+Grab a [precompiled binary](https://github.com/porjo/youtubeuploader/releases) for Linux, Mac or Windows or build it yourself.
 
 ## Build
 
