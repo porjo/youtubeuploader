@@ -1,3 +1,6 @@
 *.json
 !Godeps/*.json
 *.token
+*.mp4
+*.avi
+*.mkv

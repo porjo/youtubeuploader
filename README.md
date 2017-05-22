@@ -99,8 +99,8 @@ Video title, description etc can specified via the command line flags or via a J
   "channelId": "abcxyz",
   "recordingdate": "2017-05-21",
   "location": {
-    "latitude": "2.2945",
-    "longitude": "48.8584"
+    "latitude": 48.8584,
+    "longitude": 2.2945
   },
   "locationDescription":  "Eiffel Tower"
 }
