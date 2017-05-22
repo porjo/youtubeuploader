@@ -94,12 +94,18 @@ Video title, description etc can specified via the command line flags or via a J
   "title": "my test title",
   "description": "my test description",
   "tags": ["test tag1", "test tag2"],
-  "privacyStatus": "public",
+  "privacyStatus": "private",
   "categoryId": "10",
-  "channelId": "abcxyz"
+  "channelId": "abcxyz",
+  "recordingdate": "2017-05-21",
+  "location": {
+    "latitude": "2.2945",
+    "longitude": "48.8584"
+  },
+  "locationDescription":  "Eiffel Tower"
 }
 ```
-All fields are optional. Command line flags will be used by default. Use `\n` in the description to insert newlines.
+All fields are optional. Command line flags will be used by default (where available). Use `\n` in the description to insert newlines.
 
 ## Credit
 

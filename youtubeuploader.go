@@ -46,13 +46,28 @@ var (
 	metaJSON    = flag.String("metaJSON", "", "JSON file containing title,description,tags etc (optional)")
 )
 
-type Snippet struct {
-	Title         string   `json:"title,omitempty"`
-	Description   string   `json:"description,omitempty"`
-	CategoryId    string   `json:"categoryId,omitempty"`
-	ChannelId     string   `json:"channelId,omitempty"`
-	PrivacyStatus string   `json:"privacyStatus,omitempty"`
-	Tags          []string `json:"tags,omitempty"`
+type Video struct {
+	// snippet
+	Title       string   `json:"title,omitempty"`
+	Description string   `json:"description,omitempty"`
+	CategoryId  string   `json:"categoryId,omitempty"`
+	ChannelId   string   `json:"channelId,omitempty"`
+	Tags        []string `json:"tags,omitempty"`
+
+	// status
+	PrivacyStatus string `json:"privacyStatus,omitempty"`
+
+	// recording details
+	Location            youtube.GeoPoint `json:"location,omitempty"`
+	LocationDescription string           `json:"locationDescription, omitempty"`
+	RecordingDate       Date             `json:"recordingDate, omitempty"`
+}
+
+const inputDateLayout = "2006-01-02"
+const outputDateLayout = "2006-01-02T15:04:05.000Z" //ISO 8601 (YYYY-MM-DDThh:mm:ss.sssZ)
+
+type Date struct {
+	time.Time
 }
 
 func main() {
@@ -143,31 +158,39 @@ func main() {
 	}
 
 	upload := &youtube.Video{
-		Snippet: &youtube.VideoSnippet{},
-		Status:  &youtube.VideoStatus{},
+		Snippet:          &youtube.VideoSnippet{},
+		RecordingDetails: &youtube.VideoRecordingDetails{},
+		Status:           &youtube.VideoStatus{},
 	}
 
 	// attempt to load from meta JSON, otherwise use values specified from command line flags
 	if *metaJSON != "" {
-		snippet := Snippet{}
+		video := Video{}
 		file, e := ioutil.ReadFile(*metaJSON)
 		if e != nil {
 			fmt.Printf("Could not read metaJSON file '%s': %s\n", *metaJSON, e)
 			fmt.Println("Will use command line flags instead")
+			goto errJump
 		}
 
-		e = json.Unmarshal(file, &snippet)
+		e = json.Unmarshal(file, &video)
 		if e != nil {
 			fmt.Printf("Could not read metaJSON file '%s': %s\n", *metaJSON, e)
 			fmt.Println("Will use command line flags instead")
+			goto errJump
 		}
 
-		upload.Snippet.Tags = snippet.Tags
-		upload.Snippet.Title = snippet.Title
-		upload.Snippet.Description = snippet.Description
-		upload.Snippet.CategoryId = snippet.CategoryId
-		upload.Snippet.ChannelId = snippet.ChannelId
-		upload.Status.PrivacyStatus = snippet.PrivacyStatus
+		upload.Snippet.Tags = video.Tags
+		upload.Snippet.Title = video.Title
+		upload.Snippet.Description = video.Description
+		upload.Snippet.CategoryId = video.CategoryId
+		upload.Status.PrivacyStatus = video.PrivacyStatus
+
+		upload.RecordingDetails.Location = &video.Location
+		upload.RecordingDetails.LocationDescription = video.LocationDescription
+		upload.RecordingDetails.RecordingDate = video.RecordingDate.Format(outputDateLayout)
+
+	errJump:
 	}
 
 	if upload.Status.PrivacyStatus == "" {
@@ -186,7 +209,7 @@ func main() {
 		upload.Snippet.CategoryId = *categoryId
 	}
 
-	call := service.Videos.Insert("snippet,status", upload)
+	call := service.Videos.Insert("snippet,status,recordingDetails", upload)
 
 	var option googleapi.MediaOption
 	var video *youtube.Video
@@ -238,4 +261,11 @@ func (t *limitTransport) RoundTrip(r *http.Request) (res *http.Response, err err
 	}
 
 	return t.rt.RoundTrip(r)
+}
+
+func (d *Date) UnmarshalJSON(b []byte) (err error) {
+	s := string(b)
+	s = s[1 : len(s)-1]
+	d.Time, err = time.Parse(inputDateLayout, s)
+	return
 }
