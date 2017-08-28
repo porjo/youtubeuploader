@@ -11,11 +11,13 @@ Grab a [precompiled binary](https://github.com/porjo/youtubeuploader/releases) f
 
 ## Build
 
-This project uses [Go vendoring](https://blog.gopheracademy.com/advent-2015/vendor-folder/), so make sure you are using Go version 1.6+
+This project uses ['dep'](https://github.com/golang/dep) for [vendoring](https://blog.gopheracademy.com/advent-2015/vendor-folder/).
 
 - Install Go e.g. `yum install golang` or `apt-get install golang`
 - Define your Go Path e.g. `export GOPATH=$HOME/go`
 - Fetch the project `go get github.com/porjo/youtubeuploader`
+- run `dep ensure` in the project root
+- run `go build`
 
 ## Setup
 
@@ -96,7 +98,6 @@ Video title, description etc can specified via the command line flags or via a J
   "tags": ["test tag1", "test tag2"],
   "privacyStatus": "private",
   "categoryId": "10",
-  "channelId": "abcxyz",
   "recordingdate": "2017-05-21",
   "location": {
     "latitude": 48.8584,

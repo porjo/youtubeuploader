@@ -51,16 +51,15 @@ type Video struct {
 	Title       string   `json:"title,omitempty"`
 	Description string   `json:"description,omitempty"`
 	CategoryId  string   `json:"categoryId,omitempty"`
-	ChannelId   string   `json:"channelId,omitempty"`
 	Tags        []string `json:"tags,omitempty"`
 
 	// status
 	PrivacyStatus string `json:"privacyStatus,omitempty"`
 
 	// recording details
-	Location            youtube.GeoPoint `json:"location,omitempty"`
-	LocationDescription string           `json:"locationDescription, omitempty"`
-	RecordingDate       Date             `json:"recordingDate, omitempty"`
+	Location            *youtube.GeoPoint `json:"location,omitempty"`
+	LocationDescription string            `json:"locationDescription, omitempty"`
+	RecordingDate       Date              `json:"recordingDate, omitempty"`
 }
 
 const inputDateLayout = "2006-01-02"
@@ -136,9 +135,9 @@ func main() {
 						s := transport.reader.Monitor.Status()
 						curRate := float32(s.CurRate)
 						if curRate >= 125000 {
-							fmt.Printf("\rProgress: %8.2f Mbps, %d / %d (%s) ETA %11s", curRate/125000, s.Bytes, filesize, s.Progress, s.TimeRem)
+							fmt.Printf("\rProgress: %8.2f Mbps, %d / %d (%s) ETA %8s", curRate/125000, s.Bytes, filesize, s.Progress, s.TimeRem)
 						} else {
-							fmt.Printf("\rProgress: %8.2f kbps, %d / %d (%s) ETA %11s", curRate/125, s.Bytes, filesize, s.Progress, s.TimeRem)
+							fmt.Printf("\rProgress: %8.2f kbps, %d / %d (%s) ETA %8s", curRate/125, s.Bytes, filesize, s.Progress, s.TimeRem)
 						}
 					}
 				case <-quitChan:
@@ -184,11 +183,18 @@ func main() {
 		upload.Snippet.Title = video.Title
 		upload.Snippet.Description = video.Description
 		upload.Snippet.CategoryId = video.CategoryId
-		upload.Status.PrivacyStatus = video.PrivacyStatus
-
-		upload.RecordingDetails.Location = &video.Location
-		upload.RecordingDetails.LocationDescription = video.LocationDescription
-		upload.RecordingDetails.RecordingDate = video.RecordingDate.Format(outputDateLayout)
+		if video.PrivacyStatus != "" {
+			upload.Status.PrivacyStatus = video.PrivacyStatus
+		}
+		if video.Location != nil {
+			upload.RecordingDetails.Location = video.Location
+		}
+		if video.LocationDescription != "" {
+			upload.RecordingDetails.LocationDescription = video.LocationDescription
+		}
+		if !video.RecordingDate.IsZero() {
+			upload.RecordingDetails.RecordingDate = video.RecordingDate.Format(outputDateLayout)
+		}
 
 	errJump:
 	}
@@ -249,6 +255,8 @@ func (t *limitTransport) RoundTrip(r *http.Request) (res *http.Response, err err
 		if t.reader != nil {
 			monitor = t.reader.Monitor
 		}
+
+		// kbit/s to B/s = 1000/8 = 125
 		t.reader = flowrate.NewReader(r.Body, int64(*rate*125))
 
 		if monitor != nil {
