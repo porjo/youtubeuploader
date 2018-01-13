@@ -60,7 +60,6 @@ If it is the first time you've run the utility, a browser window should popup an
 
 Full list of options:
 ```
-Usage of ./youtubeuploader:
   -cache string
     	Token cache file (default "request.token")
   -categoryId string
@@ -69,6 +68,8 @@ Usage of ./youtubeuploader:
     	Video description (default "uploaded by youtubeuploader")
   -filename string
     	Filename to upload. Can be a URL
+  -headlessAuth
+    	set this if host does not have browser available for the oauth authorisation step
   -metaJSON string
     	JSON file containing title,description,tags etc (optional)
   -privacy string
@@ -107,6 +108,21 @@ Video title, description etc can specified via the command line flags or via a J
 }
 ```
 All fields are optional. Command line flags will be used by default (where available). Use `\n` in the description to insert newlines.
+
+## Alternative Oauth setup for headless clients
+
+If you do not have access to a web browser on the host where `youtubeuploader` is installed, you may follow this oauth setup method instead:
+
+1. Create an account on the [Google Developers Console](https://console.developers.google.com)
+1. Register a new app there
+1. Enable the Youtube API (APIs & Auth -> APIs)
+1. Create Client ID (APIs & Auth -> Credentials), select Application Type 'Other'
+1. Download the resulting credentials file, saving it as `client_secrets.json` in the `youtubeuploader` directory
+1. Run `youtubeuploader` for the first time, passing the `-headlessAuth` parameter
+1. Copy-and-paste the URL displayed and open that in a browser
+1. Copy the resulting authorisation code and paste that into the `youtubeuploader` prompt: *"Enter authorisation code here:"*
+
+(subsequent invocations of `youtubeuploader` do not require the `-headlessAuth` parameter)
 
 ## Credit
 

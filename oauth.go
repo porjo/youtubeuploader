@@ -56,7 +56,6 @@ var (
 type CallbackStatus struct {
 	code  string
 	state string
-	err   error
 }
 
 // Cache specifies the methods that implement a Token cache.
@@ -114,39 +113,33 @@ func readConfig(scope string) (*oauth2.Config, error) {
 		return nil, fmt.Errorf(missingClientSecretsMessage, fullPath)
 	}
 
-	cfg := new(Config)
-	err = json.Unmarshal(data, &cfg)
+	cfg1 := new(Config)
+	err = json.Unmarshal(data, &cfg1)
 	if err != nil {
 		return nil, err
 	}
 
 	var oCfg *oauth2.Config
-	if len(cfg.Web.RedirectURIs) > 0 {
-		oCfg = &oauth2.Config{
-			ClientID:     cfg.Web.ClientID,
-			ClientSecret: cfg.Web.ClientSecret,
-			Scopes:       []string{scope},
-			Endpoint: oauth2.Endpoint{
-				AuthURL:  cfg.Web.AuthURI,
-				TokenURL: cfg.Web.TokenURI,
-			},
-			RedirectURL: cfg.Web.RedirectURIs[0],
-		}
-	} else if len(cfg.Installed.RedirectURIs) > 0 {
-		oCfg = &oauth2.Config{
-			ClientID:     cfg.Installed.ClientID,
-			ClientSecret: cfg.Installed.ClientSecret,
-			Scopes:       []string{scope},
-			Endpoint: oauth2.Endpoint{
-				AuthURL:  cfg.Installed.AuthURI,
-				TokenURL: cfg.Installed.TokenURI,
-			},
-			RedirectURL: cfg.Installed.RedirectURIs[0],
-		}
+
+	var cfg2 ClientConfig
+	if cfg1.Web.ClientID != "" {
+		cfg2 = cfg1.Web
+	} else if cfg1.Installed.ClientID != "" {
+		cfg2 = cfg1.Installed
 	} else {
-		return nil, errors.New("Must specify a redirect URI in config file or when creating OAuth client")
+		return nil, errors.New("Client secrets file format not recognised")
 	}
 
+	oCfg = &oauth2.Config{
+		ClientID:     cfg2.ClientID,
+		ClientSecret: cfg2.ClientSecret,
+		Scopes:       []string{scope},
+		Endpoint: oauth2.Endpoint{
+			AuthURL:  cfg2.AuthURI,
+			TokenURL: cfg2.TokenURI,
+		},
+		RedirectURL: cfg2.RedirectURIs[0],
+	}
 	return oCfg, nil
 }
 
@@ -194,27 +187,43 @@ func buildOAuthHTTPClient(ctx context.Context, scope string) (*http.Client, erro
 		// the state query parameter on your redirect callback
 		randState := fmt.Sprintf("st%d", time.Now().UnixNano())
 
-		// Start web server.
-		// This is how this program receives the authorization code
-		// when the browser redirects.
-		callbackCh, err := startWebServer()
-		if err != nil {
-			return nil, err
+		callbackCh := make(chan CallbackStatus)
+		if !*headlessAuth {
+			// Start web server.
+			// This is how this program receives the authorization code
+			// when the browser redirects.
+			callbackCh, err = startWebServer()
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		url := config.AuthCodeURL(randState, oauth2.AccessTypeOffline, oauth2.ApprovalForce)
-		err = openURL(url)
-		if err != nil {
-			fmt.Println("Visit the URL below to get a code.",
-				" This program will pause until the site is visted.")
-		} else {
-			fmt.Println("Your browser has been opened to an authorization URL.",
-				" This program will resume once authorization has been provided.")
-		}
-		fmt.Println(url)
 
-		// Wait for the web server to get the code.
-		cbs := <-callbackCh
+		var cbs CallbackStatus
+
+		if *headlessAuth {
+			fmt.Printf("Visit the URL for the auth dialog: %v\n", url)
+
+			fmt.Printf("Enter authorisation code here: ")
+			// FIXME: how to check state?
+			cbs.state = randState
+			if _, err := fmt.Scanln(&cbs.code); err != nil {
+				return nil, err
+			}
+		} else {
+			err = openURL(url)
+			if err != nil {
+				fmt.Println("Visit the URL below to get a code.",
+					" This program will pause until the site is visted.")
+			} else {
+				fmt.Println("Your browser has been opened to an authorization URL.",
+					" This program will resume once authorization has been provided.")
+			}
+
+			// Wait for the web server to get the code.
+			cbs = <-callbackCh
+		}
 
 		if cbs.state != randState {
 			return nil, fmt.Errorf("expecting state '%s', received state '%s'", randState, cbs.state)

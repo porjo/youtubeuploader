@@ -35,15 +35,16 @@ import (
 )
 
 var (
-	filename    = flag.String("filename", "", "Filename to upload. Can be a URL")
-	title       = flag.String("title", "Video Title", "Video title")
-	description = flag.String("description", "uploaded by youtubeuploader", "Video description")
-	categoryId  = flag.String("categoryId", "", "Video category Id")
-	tags        = flag.String("tags", "", "Comma separated list of video tags")
-	privacy     = flag.String("privacy", "private", "Video privacy status")
-	quiet       = flag.Bool("quiet", false, "Suppress progress indicator")
-	rate        = flag.Int("ratelimit", 0, "Rate limit upload in kbps. No limit by default")
-	metaJSON    = flag.String("metaJSON", "", "JSON file containing title,description,tags etc (optional)")
+	filename     = flag.String("filename", "", "Filename to upload. Can be a URL")
+	title        = flag.String("title", "Video Title", "Video title")
+	description  = flag.String("description", "uploaded by youtubeuploader", "Video description")
+	categoryId   = flag.String("categoryId", "", "Video category Id")
+	tags         = flag.String("tags", "", "Comma separated list of video tags")
+	privacy      = flag.String("privacy", "private", "Video privacy status")
+	quiet        = flag.Bool("quiet", false, "Suppress progress indicator")
+	rate         = flag.Int("ratelimit", 0, "Rate limit upload in kbps. No limit by default")
+	metaJSON     = flag.String("metaJSON", "", "JSON file containing title,description,tags etc (optional)")
+	headlessAuth = flag.Bool("headlessAuth", false, "set this if host does not have browser available for oauth authorisation step")
 )
 
 type Video struct {
