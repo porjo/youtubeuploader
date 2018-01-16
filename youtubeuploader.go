@@ -55,7 +55,11 @@ type Video struct {
 	Tags        []string `json:"tags,omitempty"`
 
 	// status
-	PrivacyStatus string `json:"privacyStatus,omitempty"`
+	PrivacyStatus       string `json:"privacyStatus,omitempty"`
+	Embeddable          bool   `json:"embeddable,omitempty"`
+	License             string `json:"license,omitempty"`
+	PublicStatsViewable bool   `json:"publicStatsViewable,omitempty"`
+	PublishAt           string `json:"publishAt,omitempty"`
 
 	// recording details
 	Location            *youtube.GeoPoint `json:"location,omitempty"`
@@ -184,9 +188,11 @@ func main() {
 		upload.Snippet.Title = video.Title
 		upload.Snippet.Description = video.Description
 		upload.Snippet.CategoryId = video.CategoryId
-		if video.PrivacyStatus != "" {
-			upload.Status.PrivacyStatus = video.PrivacyStatus
-		}
+		upload.Status.PrivacyStatus = video.PrivacyStatus
+		upload.Status.Embeddable = video.Embeddable
+		upload.Status.License = video.License
+		upload.Status.PublicStatsViewable = video.PublicStatsViewable
+		upload.Status.PublishAt = video.PublishAt
 		if video.Location != nil {
 			upload.RecordingDetails.Location = video.Location
 		}
@@ -201,7 +207,7 @@ func main() {
 	}
 
 	if upload.Status.PrivacyStatus == "" {
-		upload.Status = &youtube.VideoStatus{PrivacyStatus: *privacy}
+		upload.Status.PrivacyStatus = *privacy
 	}
 	if upload.Snippet.Tags == nil && strings.Trim(*tags, "") != "" {
 		upload.Snippet.Tags = strings.Split(*tags, ",")
