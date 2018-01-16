@@ -36,6 +36,7 @@ import (
 
 var (
 	filename     = flag.String("filename", "", "Filename to upload. Can be a URL")
+	thumbnail    = flag.String("thumbnail", "", "Thumbnail to upload. Can be a URL")
 	title        = flag.String("title", "Video Title", "Video title")
 	description  = flag.String("description", "uploaded by youtubeuploader", "Video description")
 	categoryId   = flag.String("categoryId", "", "Video category Id")
@@ -79,41 +80,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	var reader io.Reader
-	var filesize int64
+	reader, filesize := Open(*filename)
+	defer reader.Close()
 
-	if strings.HasPrefix(*filename, "http") {
-		resp, err := http.Head(*filename)
-		if err != nil {
-			log.Fatalf("Error opening %v: %v", *filename, err)
-		}
-		lenStr := resp.Header.Get("content-length")
-		if lenStr != "" {
-			filesize, err = strconv.ParseInt(lenStr, 10, 64)
-			if err != nil {
-				log.Fatal(err)
-			}
-		}
-
-		resp, err = http.Get(*filename)
-		if err != nil {
-			log.Fatalf("Error opening %v: %v", *filename, err)
-		}
-		reader = resp.Body
-		filesize = resp.ContentLength
-		defer resp.Body.Close()
-	} else {
-		file, err := os.Open(*filename)
-		if err != nil {
-			log.Fatalf("Error opening %v: %v", *filename, err)
-		}
-		fileInfo, err := file.Stat()
-		if err != nil {
-			log.Fatalf("Error stating file %v: %v", *filename, err)
-		}
-		filesize = fileInfo.Size()
-		reader = file
-		defer file.Close()
+	var thumbReader io.ReadCloser
+	if *thumbnail != "" {
+		thumbReader, _ = Open(*thumbnail)
+		defer thumbReader.Close()
 	}
 
 	ctx := context.Background()
@@ -239,6 +212,15 @@ func main() {
 		}
 	}
 	fmt.Printf("\nUpload successful! Video ID: %v\n", video.Id)
+
+	if thumbReader != nil {
+		log.Printf("Uploading thumbnail '%s'...\n", *thumbnail)
+		_, err = service.Thumbnails.Set(video.Id).Media(thumbReader).Do()
+		if err != nil {
+			log.Fatalf("Error making YouTube API call: %v", err)
+		}
+		fmt.Printf("Thumbnail uploaded!\n")
+	}
 }
 
 type limitTransport struct {
@@ -277,4 +259,42 @@ func (d *Date) UnmarshalJSON(b []byte) (err error) {
 	s = s[1 : len(s)-1]
 	d.Time, err = time.Parse(inputDateLayout, s)
 	return
+}
+
+func Open(filename string) (reader io.ReadCloser, filesize int64) {
+	if strings.HasPrefix(filename, "http") {
+		resp, err := http.Head(filename)
+		if err != nil {
+			log.Fatalf("Error opening %v: %v", filename, err)
+		}
+		lenStr := resp.Header.Get("content-length")
+		if lenStr != "" {
+			filesize, err = strconv.ParseInt(lenStr, 10, 64)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+
+		resp, err = http.Get(filename)
+		if err != nil {
+			log.Fatalf("Error opening %v: %v", filename, err)
+		}
+		if resp.ContentLength != 0 {
+			filesize = resp.ContentLength
+		}
+		reader = resp.Body
+		return
+	}
+
+	file, err := os.Open(filename)
+	if err != nil {
+		log.Fatalf("Error opening %v: %v", filename, err)
+	}
+
+	fileInfo, err := file.Stat()
+	if err != nil {
+		log.Fatalf("Error stating file %v: %v", filename, err)
+	}
+
+	return file, fileInfo.Size()
 }
