@@ -122,12 +122,11 @@ func main() {
 		Transport: transport,
 	})
 
+	var quitChan chan chan struct{}
+
 	if !*quiet {
-		ticker := time.NewTicker(time.Second).C
-		quitChan := make(chan bool)
-		defer func() {
-			quitChan <- true
-		}()
+		ticker := time.Tick(time.Second)
+		quitChan = make(chan chan struct{})
 		go func() {
 			for {
 				select {
@@ -141,7 +140,8 @@ func main() {
 							fmt.Printf("\rProgress: %8.2f kbps, %d / %d (%s) ETA %8s", curRate/125, s.Bytes, filesize, s.Progress, s.TimeRem)
 						}
 					}
-				case <-quitChan:
+				case ch := <-quitChan:
+					close(ch)
 					return
 				}
 			}
@@ -231,6 +231,11 @@ func main() {
 	fmt.Printf("Uploading file '%s'...\n", *filename)
 
 	video, err = call.Media(reader, option).Do()
+
+	quit := make(chan struct{})
+	quitChan <- quit
+	<-quit
+
 	if err != nil {
 		if video != nil {
 			log.Fatalf("Error making YouTube API call: %v, %v", err, video.HTTPStatusCode)
