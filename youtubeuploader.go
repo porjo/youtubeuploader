@@ -128,17 +128,21 @@ func main() {
 		ticker := time.Tick(time.Second)
 		quitChan = make(chan chan struct{})
 		go func() {
+			var erase int
 			for {
 				select {
 				case <-ticker:
 					if transport.reader != nil {
 						s := transport.reader.Monitor.Status()
 						curRate := float32(s.CurRate)
+						var status string
 						if curRate >= 125000 {
-							fmt.Printf("\rProgress: %8.2f Mbps, %d / %d (%s) ETA %8s", curRate/125000, s.Bytes, filesize, s.Progress, s.TimeRem)
+							status = fmt.Sprintf("Progress: %8.2f Mbps, %d / %d (%s) ETA %8s", curRate/125000, s.Bytes, filesize, s.Progress, s.TimeRem)
 						} else {
-							fmt.Printf("\rProgress: %8.2f kbps, %d / %d (%s) ETA %8s", curRate/125, s.Bytes, filesize, s.Progress, s.TimeRem)
+							status = fmt.Sprintf("Progress: %8.2f kbps, %d / %d (%s) ETA %8s", curRate/125, s.Bytes, filesize, s.Progress, s.TimeRem)
 						}
+						fmt.Printf("\r%s\r%s", strings.Repeat(" ", erase), status)
+						erase = len(status)
 					}
 				case ch := <-quitChan:
 					close(ch)
