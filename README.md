@@ -82,6 +82,8 @@ Full list of options:
     	Client Secrets configuration (default "client_secrets.json")
   -tags string
     	Comma separated list of video tags
+  -thumbnail string
+    	Thumbnail to upload. Can be a URL
   -title string
     	Video title (default "Video Title")
 ```
