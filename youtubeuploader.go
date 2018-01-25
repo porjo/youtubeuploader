@@ -130,7 +130,7 @@ func main() {
 			}
 		}()
 	}
-	client, err := buildOAuthHTTPClient(ctx, youtube.YoutubeUploadScope+" "+youtube.YoutubeReadonlyScope)
+	client, err := buildOAuthHTTPClient(ctx, youtube.YoutubeScope+" "+youtube.YoutubeUploadScope+" "+youtube.YoutubeReadonlyScope)
 	if err != nil {
 		log.Fatalf("Error building OAuth client: %v", err)
 	}
@@ -145,7 +145,7 @@ func main() {
 
 	service, err := youtube.New(client)
 	if err != nil {
-		log.Fatalf("error creating playlist service: %s", err)
+		log.Fatalf("Error creating playlist service: %s", err)
 	}
 
 	fmt.Printf("Uploading file '%s'...\n", *filename)
