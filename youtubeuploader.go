@@ -36,6 +36,7 @@ import (
 
 var (
 	filename     = flag.String("filename", "", "Filename to upload. Can be a URL")
+	thumbnail    = flag.String("thumbnail", "", "Thumbnail to upload. Can be a URL")
 	title        = flag.String("title", "Video Title", "Video title")
 	description  = flag.String("description", "uploaded by youtubeuploader", "Video description")
 	categoryId   = flag.String("categoryId", "", "Video category Id")
@@ -55,7 +56,11 @@ type VideoMeta struct {
 	Tags        []string `json:"tags,omitempty"`
 
 	// status
-	PrivacyStatus string `json:"privacyStatus,omitempty"`
+	PrivacyStatus       string `json:"privacyStatus,omitempty"`
+	Embeddable          bool   `json:"embeddable,omitempty"`
+	License             string `json:"license,omitempty"`
+	PublicStatsViewable bool   `json:"publicStatsViewable,omitempty"`
+	PublishAt           string `json:"publishAt,omitempty"`
 
 	// recording details
 	Location            *youtube.GeoPoint `json:"location,omitempty"`
@@ -81,41 +86,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	var reader io.Reader
-	var filesize int64
+	reader, filesize := Open(*filename)
+	defer reader.Close()
 
-	if strings.HasPrefix(*filename, "http") {
-		resp, err := http.Head(*filename)
-		if err != nil {
-			log.Fatalf("Error opening %v: %v", *filename, err)
-		}
-		lenStr := resp.Header.Get("content-length")
-		if lenStr != "" {
-			filesize, err = strconv.ParseInt(lenStr, 10, 64)
-			if err != nil {
-				log.Fatal(err)
-			}
-		}
-
-		resp, err = http.Get(*filename)
-		if err != nil {
-			log.Fatalf("Error opening %v: %v", *filename, err)
-		}
-		reader = resp.Body
-		filesize = resp.ContentLength
-		defer resp.Body.Close()
-	} else {
-		file, err := os.Open(*filename)
-		if err != nil {
-			log.Fatalf("Error opening %v: %v", *filename, err)
-		}
-		fileInfo, err := file.Stat()
-		if err != nil {
-			log.Fatalf("Error stating file %v: %v", *filename, err)
-		}
-		filesize = fileInfo.Size()
-		reader = file
-		defer file.Close()
+	var thumbReader io.ReadCloser
+	if *thumbnail != "" {
+		thumbReader, _ = Open(*thumbnail)
+		defer thumbReader.Close()
 	}
 
 	ctx := context.Background()
@@ -124,26 +101,30 @@ func main() {
 		Transport: transport,
 	})
 
+	var quitChan chan chan struct{}
+
 	if !*quiet {
-		ticker := time.NewTicker(time.Second).C
-		quitChan := make(chan bool)
-		defer func() {
-			quitChan <- true
-		}()
+		ticker := time.Tick(time.Second)
+		quitChan = make(chan chan struct{})
 		go func() {
+			var erase int
 			for {
 				select {
 				case <-ticker:
 					if transport.reader != nil {
 						s := transport.reader.Monitor.Status()
 						curRate := float32(s.CurRate)
+						var status string
 						if curRate >= 125000 {
-							fmt.Printf("\rProgress: %8.2f Mbps, %d / %d (%s) ETA %8s", curRate/125000, s.Bytes, filesize, s.Progress, s.TimeRem)
+							status = fmt.Sprintf("Progress: %8.2f Mbps, %d / %d (%s) ETA %8s", curRate/125000, s.Bytes, filesize, s.Progress, s.TimeRem)
 						} else {
-							fmt.Printf("\rProgress: %8.2f kbps, %d / %d (%s) ETA %8s", curRate/125, s.Bytes, filesize, s.Progress, s.TimeRem)
+							status = fmt.Sprintf("Progress: %8.2f kbps, %d / %d (%s) ETA %8s", curRate/125, s.Bytes, filesize, s.Progress, s.TimeRem)
 						}
+						fmt.Printf("\r%s\r%s", strings.Repeat(" ", erase), status)
+						erase = len(status)
 					}
-				case <-quitChan:
+				case ch := <-quitChan:
+					close(ch)
 					return
 				}
 			}
@@ -181,6 +162,11 @@ func main() {
 
 	call := service.Videos.Insert("snippet,status,recordingDetails", upload)
 	video, err = call.Media(reader, option).Do()
+
+	quit := make(chan struct{})
+	quitChan <- quit
+	<-quit
+
 	if err != nil {
 		if video != nil {
 			log.Fatalf("Error making YouTube API call: %v, %v", err, video.HTTPStatusCode)
@@ -195,6 +181,14 @@ func main() {
 		if err != nil {
 			log.Fatalf("%s", err)
 		}
+	}
+	if thumbReader != nil {
+		log.Printf("Uploading thumbnail '%s'...\n", *thumbnail)
+		_, err = service.Thumbnails.Set(video.Id).Media(thumbReader).Do()
+		if err != nil {
+			log.Fatalf("Error making YouTube API call: %v", err)
+		}
+		fmt.Printf("Thumbnail uploaded!\n")
 	}
 }
 
@@ -320,4 +314,42 @@ errJump:
 	}
 
 	return
+}
+
+func Open(filename string) (reader io.ReadCloser, filesize int64) {
+	if strings.HasPrefix(filename, "http") {
+		resp, err := http.Head(filename)
+		if err != nil {
+			log.Fatalf("Error opening %v: %v", filename, err)
+		}
+		lenStr := resp.Header.Get("content-length")
+		if lenStr != "" {
+			filesize, err = strconv.ParseInt(lenStr, 10, 64)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+
+		resp, err = http.Get(filename)
+		if err != nil {
+			log.Fatalf("Error opening %v: %v", filename, err)
+		}
+		if resp.ContentLength != 0 {
+			filesize = resp.ContentLength
+		}
+		reader = resp.Body
+		return
+	}
+
+	file, err := os.Open(filename)
+	if err != nil {
+		log.Fatalf("Error opening %v: %v", filename, err)
+	}
+
+	fileInfo, err := file.Stat()
+	if err != nil {
+		log.Fatalf("Error stating file %v: %v", filename, err)
+	}
+
+	return file, fileInfo.Size()
 }

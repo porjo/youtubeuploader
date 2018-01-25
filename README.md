@@ -82,6 +82,8 @@ Full list of options:
     	Client Secrets configuration (default "client_secrets.json")
   -tags string
     	Comma separated list of video tags
+  -thumbnail string
+    	Thumbnail to upload. Can be a URL
   -title string
     	Video title (default "Video Title")
 ```
@@ -98,6 +100,10 @@ Video title, description etc can specified via the command line flags or via a J
   "description": "my test description",
   "tags": ["test tag1", "test tag2"],
   "privacyStatus": "private",
+  "embeddable": true,
+  "license": "creativeCommon",
+  "publicStatsViewable": true,
+  "publishAt": "2017-06-01T12:00:00.000+02:00",
   "categoryId": "10",
   "recordingdate": "2017-05-21",
   "location": {
