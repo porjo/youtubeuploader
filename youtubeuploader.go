@@ -48,7 +48,7 @@ var (
 	headlessAuth = flag.Bool("headlessAuth", false, "set this if host does not have browser available for oauth authorisation step")
 )
 
-type Video struct {
+type VideoMeta struct {
 	// snippet
 	Title       string   `json:"title,omitempty"`
 	Description string   `json:"description,omitempty"`
@@ -66,6 +66,8 @@ type Video struct {
 	Location            *youtube.GeoPoint `json:"location,omitempty"`
 	LocationDescription string            `json:"locationDescription, omitempty"`
 	RecordingDate       Date              `json:"recordingDate, omitempty"`
+
+	PlaylistID string `json:"playlistId, omitempty"`
 }
 
 const inputDateLayout = "2006-01-02"
@@ -128,14 +130,9 @@ func main() {
 			}
 		}()
 	}
-	client, err := buildOAuthHTTPClient(ctx, youtube.YoutubeUploadScope)
+	client, err := buildOAuthHTTPClient(ctx, youtube.YoutubeScope+" "+youtube.YoutubeUploadScope+" "+youtube.YoutubeReadonlyScope)
 	if err != nil {
 		log.Fatalf("Error building OAuth client: %v", err)
-	}
-
-	service, err := youtube.New(client)
-	if err != nil {
-		log.Fatalf("Error creating YouTube client: %v", err)
 	}
 
 	upload := &youtube.Video{
@@ -144,43 +141,11 @@ func main() {
 		Status:           &youtube.VideoStatus{},
 	}
 
-	// attempt to load from meta JSON, otherwise use values specified from command line flags
-	if *metaJSON != "" {
-		video := Video{}
-		file, e := ioutil.ReadFile(*metaJSON)
-		if e != nil {
-			fmt.Printf("Could not read metaJSON file '%s': %s\n", *metaJSON, e)
-			fmt.Println("Will use command line flags instead")
-			goto errJump
-		}
+	videoMeta := LoadVideoMeta(*metaJSON, upload)
 
-		e = json.Unmarshal(file, &video)
-		if e != nil {
-			fmt.Printf("Could not read metaJSON file '%s': %s\n", *metaJSON, e)
-			fmt.Println("Will use command line flags instead")
-			goto errJump
-		}
-
-		upload.Snippet.Tags = video.Tags
-		upload.Snippet.Title = video.Title
-		upload.Snippet.Description = video.Description
-		upload.Snippet.CategoryId = video.CategoryId
-		upload.Status.PrivacyStatus = video.PrivacyStatus
-		upload.Status.Embeddable = video.Embeddable
-		upload.Status.License = video.License
-		upload.Status.PublicStatsViewable = video.PublicStatsViewable
-		upload.Status.PublishAt = video.PublishAt
-		if video.Location != nil {
-			upload.RecordingDetails.Location = video.Location
-		}
-		if video.LocationDescription != "" {
-			upload.RecordingDetails.LocationDescription = video.LocationDescription
-		}
-		if !video.RecordingDate.IsZero() {
-			upload.RecordingDetails.RecordingDate = video.RecordingDate.Format(outputDateLayout)
-		}
-
-	errJump:
+	service, err := youtube.New(client)
+	if err != nil {
+		log.Fatalf("Error creating playlist service: %s", err)
 	}
 
 	if upload.Status.PrivacyStatus == "" {
@@ -199,7 +164,7 @@ func main() {
 		upload.Snippet.CategoryId = *categoryId
 	}
 
-	call := service.Videos.Insert("snippet,status,recordingDetails", upload)
+	fmt.Printf("Uploading file '%s'...\n", *filename)
 
 	var option googleapi.MediaOption
 	var video *youtube.Video
@@ -211,8 +176,7 @@ func main() {
 		option = googleapi.ChunkSize(googleapi.DefaultUploadChunkSize)
 	}
 
-	fmt.Printf("Uploading file '%s'...\n", *filename)
-
+	call := service.Videos.Insert("snippet,status,recordingDetails", upload)
 	video, err = call.Media(reader, option).Do()
 
 	quit := make(chan struct{})
@@ -228,6 +192,12 @@ func main() {
 	}
 	fmt.Printf("\nUpload successful! Video ID: %v\n", video.Id)
 
+	if videoMeta.PlaylistID != "" {
+		err = AddVideoToPlaylist(service, videoMeta.PlaylistID, video.Id)
+		if err != nil {
+			log.Fatalf("Error adding video to playlist: %s", err)
+		}
+	}
 	if thumbReader != nil {
 		log.Printf("Uploading thumbnail '%s'...\n", *thumbnail)
 		_, err = service.Thumbnails.Set(video.Id).Media(thumbReader).Do()
@@ -245,7 +215,6 @@ type limitTransport struct {
 }
 
 func (t *limitTransport) RoundTrip(r *http.Request) (res *http.Response, err error) {
-
 	// FIXME need a better way to detect which roundtrip is the media upload
 	if r.ContentLength > 1000 {
 		var monitor *flowrate.Monitor
@@ -273,6 +242,100 @@ func (d *Date) UnmarshalJSON(b []byte) (err error) {
 	s := string(b)
 	s = s[1 : len(s)-1]
 	d.Time, err = time.Parse(inputDateLayout, s)
+	return
+}
+
+func AddVideoToPlaylist(service *youtube.Service, playlistID, videoID string) (err error) {
+	listCall := service.Playlists.List("snippet,contentDetails")
+	listCall = listCall.Mine(true)
+	response, err := listCall.Do()
+	if err != nil {
+		return fmt.Errorf("error retrieving playlists: %s", err)
+	}
+
+	var playlist *youtube.Playlist
+	for _, pl := range response.Items {
+		if pl.Id == playlistID {
+			playlist = pl
+			break
+		}
+	}
+
+	// TODO: handle creation of playlist
+	if playlist == nil {
+		return fmt.Errorf("playlist ID '%s' doesn't exist", playlistID)
+	}
+
+	playlistItem := &youtube.PlaylistItem{}
+	playlistItem.Snippet = &youtube.PlaylistItemSnippet{PlaylistId: playlist.Id}
+	playlistItem.Snippet.ResourceId = &youtube.ResourceId{
+		VideoId: videoID,
+		Kind:    "youtube#video",
+	}
+
+	insertCall := service.PlaylistItems.Insert("snippet", playlistItem)
+	_, err = insertCall.Do()
+	if err != nil {
+		return fmt.Errorf("error inserting video into playlist: %s", err)
+	}
+
+	fmt.Printf("Video added to playlist '%s' (%s)\n", playlist.Snippet.Title, playlist.Id)
+
+	return nil
+}
+
+func LoadVideoMeta(filename string, video *youtube.Video) (videoMeta VideoMeta) {
+	// attempt to load from meta JSON, otherwise use values specified from command line flags
+	if filename != "" {
+		file, e := ioutil.ReadFile(filename)
+		if e != nil {
+			fmt.Printf("Could not read filename file '%s': %s\n", filename, e)
+			fmt.Println("Will use command line flags instead")
+			goto errJump
+		}
+
+		e = json.Unmarshal(file, &videoMeta)
+		if e != nil {
+			fmt.Printf("Could not read filename file '%s': %s\n", filename, e)
+			fmt.Println("Will use command line flags instead")
+			goto errJump
+		}
+
+		video.Snippet.Tags = videoMeta.Tags
+		video.Snippet.Title = videoMeta.Title
+		video.Snippet.Description = videoMeta.Description
+		video.Snippet.CategoryId = videoMeta.CategoryId
+		if videoMeta.PrivacyStatus != "" {
+			video.Status.PrivacyStatus = videoMeta.PrivacyStatus
+		}
+		if videoMeta.Location != nil {
+			video.RecordingDetails.Location = videoMeta.Location
+		}
+		if videoMeta.LocationDescription != "" {
+			video.RecordingDetails.LocationDescription = videoMeta.LocationDescription
+		}
+		if !videoMeta.RecordingDate.IsZero() {
+			video.RecordingDetails.RecordingDate = videoMeta.RecordingDate.Format(outputDateLayout)
+		}
+	}
+errJump:
+
+	if video.Status.PrivacyStatus == "" {
+		video.Status = &youtube.VideoStatus{PrivacyStatus: *privacy}
+	}
+	if video.Snippet.Tags == nil && strings.Trim(*tags, "") != "" {
+		video.Snippet.Tags = strings.Split(*tags, ",")
+	}
+	if video.Snippet.Title == "" {
+		video.Snippet.Title = *title
+	}
+	if video.Snippet.Description == "" {
+		video.Snippet.Description = *description
+	}
+	if video.Snippet.CategoryId == "" && *categoryId != "" {
+		video.Snippet.CategoryId = *categoryId
+	}
+
 	return
 }
 

@@ -110,7 +110,8 @@ Video title, description etc can specified via the command line flags or via a J
     "latitude": 48.8584,
     "longitude": 2.2945
   },
-  "locationDescription":  "Eiffel Tower"
+  "locationDescription":  "Eiffel Tower",
+  "playlistId":  "xxxxxxxxyyyyyyyyyy"
 }
 ```
 All fields are optional. Command line flags will be used by default (where available). Use `\n` in the description to insert newlines.
@@ -133,3 +134,5 @@ If you do not have access to a web browser on the host where `youtubeuploader` i
 ## Credit
 
 Based on [Go Youtube API Sample code](https://github.com/youtube/api-samples/tree/master/go)
+
+Thanks to [github.com/tokland/youtube-upload](https://github.com/tokland/youtube-upload) for insight into how to update playlists.
