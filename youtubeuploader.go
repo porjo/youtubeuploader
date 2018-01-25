@@ -15,7 +15,7 @@ limitations under the License.
 package main
 
 import (
-	//	"encoding/json"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -30,7 +30,7 @@ import (
 	"github.com/porjo/go-flowrate/flowrate"
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2"
-	//	"google.golang.org/api/googleapi"
+	"google.golang.org/api/googleapi"
 	"google.golang.org/api/youtube/v3"
 )
 
@@ -47,7 +47,7 @@ var (
 	headlessAuth = flag.Bool("headlessAuth", false, "set this if host does not have browser available for oauth authorisation step")
 )
 
-type Video struct {
+type VideoMeta struct {
 	// snippet
 	Title       string   `json:"title,omitempty"`
 	Description string   `json:"description,omitempty"`
@@ -61,6 +61,8 @@ type Video struct {
 	Location            *youtube.GeoPoint `json:"location,omitempty"`
 	LocationDescription string            `json:"locationDescription, omitempty"`
 	RecordingDate       Date              `json:"recordingDate, omitempty"`
+
+	PlaylistID string `json:"playlistId, omitempty"`
 }
 
 const inputDateLayout = "2006-01-02"
@@ -147,99 +149,53 @@ func main() {
 			}
 		}()
 	}
-	//client, err := buildOAuthHTTPClient(ctx, youtube.YoutubeUploadScope)
 	client, err := buildOAuthHTTPClient(ctx, youtube.YoutubeUploadScope+" "+youtube.YoutubeReadonlyScope)
 	if err != nil {
 		log.Fatalf("Error building OAuth client: %v", err)
 	}
 
-	AddVideoToPlaylist(client, "", "")
+	upload := &youtube.Video{
+		Snippet:          &youtube.VideoSnippet{},
+		RecordingDetails: &youtube.VideoRecordingDetails{},
+		Status:           &youtube.VideoStatus{},
+	}
 
-	fmt.Printf("%v\n", reader)
-	/*
-		upload := &youtube.Video{
-			Snippet:          &youtube.VideoSnippet{},
-			RecordingDetails: &youtube.VideoRecordingDetails{},
-			Status:           &youtube.VideoStatus{},
-		}
+	videoMeta := LoadVideoMeta(*metaJSON, upload)
 
-		// attempt to load from meta JSON, otherwise use values specified from command line flags
-		if *metaJSON != "" {
-			video := Video{}
-			file, e := ioutil.ReadFile(*metaJSON)
-			if e != nil {
-				fmt.Printf("Could not read metaJSON file '%s': %s\n", *metaJSON, e)
-				fmt.Println("Will use command line flags instead")
-				goto errJump
-			}
+	service, err := youtube.New(client)
+	if err != nil {
+		log.Fatalf("error creating playlist service: %s", err)
+	}
 
-			e = json.Unmarshal(file, &video)
-			if e != nil {
-				fmt.Printf("Could not read metaJSON file '%s': %s\n", *metaJSON, e)
-				fmt.Println("Will use command line flags instead")
-				goto errJump
-			}
+	fmt.Printf("Uploading file '%s'...\n", *filename)
 
-			upload.Snippet.Tags = video.Tags
-			upload.Snippet.Title = video.Title
-			upload.Snippet.Description = video.Description
-			upload.Snippet.CategoryId = video.CategoryId
-			if video.PrivacyStatus != "" {
-				upload.Status.PrivacyStatus = video.PrivacyStatus
-			}
-			if video.Location != nil {
-				upload.RecordingDetails.Location = video.Location
-			}
-			if video.LocationDescription != "" {
-				upload.RecordingDetails.LocationDescription = video.LocationDescription
-			}
-			if !video.RecordingDate.IsZero() {
-				upload.RecordingDetails.RecordingDate = video.RecordingDate.Format(outputDateLayout)
-			}
+	var option googleapi.MediaOption
+	var video *youtube.Video
 
-		errJump:
-		}
+	// our RoundTrip gets bypassed if the filesize < DefaultUploadChunkSize
+	if googleapi.DefaultUploadChunkSize > filesize {
+		option = googleapi.ChunkSize(int(filesize / 2))
+	} else {
+		option = googleapi.ChunkSize(googleapi.DefaultUploadChunkSize)
+	}
 
-		if upload.Status.PrivacyStatus == "" {
-			upload.Status = &youtube.VideoStatus{PrivacyStatus: *privacy}
-		}
-		if upload.Snippet.Tags == nil && strings.Trim(*tags, "") != "" {
-			upload.Snippet.Tags = strings.Split(*tags, ",")
-		}
-		if upload.Snippet.Title == "" {
-			upload.Snippet.Title = *title
-		}
-		if upload.Snippet.Description == "" {
-			upload.Snippet.Description = *description
-		}
-		if upload.Snippet.CategoryId == "" && *categoryId != "" {
-			upload.Snippet.CategoryId = *categoryId
-		}
-
-		call := service.Videos.Insert("snippet,status,recordingDetails", upload)
-
-		var option googleapi.MediaOption
-		var video *youtube.Video
-
-		// our RoundTrip gets bypassed if the filesize < DefaultUploadChunkSize
-		if googleapi.DefaultUploadChunkSize > filesize {
-			option = googleapi.ChunkSize(int(filesize / 2))
+	call := service.Videos.Insert("snippet,status,recordingDetails", upload)
+	video, err = call.Media(reader, option).Do()
+	if err != nil {
+		if video != nil {
+			log.Fatalf("Error making YouTube API call: %v, %v", err, video.HTTPStatusCode)
 		} else {
-			option = googleapi.ChunkSize(googleapi.DefaultUploadChunkSize)
+			log.Fatalf("Error making YouTube API call: %v", err)
 		}
+	}
+	fmt.Printf("\nUpload successful! Video ID: %v\n", video.Id)
 
-		fmt.Printf("Uploading file '%s'...\n", *filename)
-
-		video, err = call.Media(reader, option).Do()
+	if videoMeta.PlaylistID != "" {
+		err = AddVideoToPlaylist(service, videoMeta.PlaylistID, video.Id)
 		if err != nil {
-			if video != nil {
-				log.Fatalf("Error making YouTube API call: %v, %v", err, video.HTTPStatusCode)
-			} else {
-				log.Fatalf("Error making YouTube API call: %v", err)
-			}
+			log.Fatalf("%s", err)
 		}
-		fmt.Printf("\nUpload successful! Video ID: %v\n", video.Id)
-	*/
+	}
 }
 
 type limitTransport struct {
@@ -280,20 +236,88 @@ func (d *Date) UnmarshalJSON(b []byte) (err error) {
 	return
 }
 
-func AddVideoToPlaylist(client *http.Client, playlistID, VideoID string) {
-	service, err := youtube.New(client)
+func AddVideoToPlaylist(service *youtube.Service, playlistID, VideoID string) (err error) {
+
+	listCall := service.Playlists.List("snippet,contentDetails")
+	listCall = listCall.Mine(true)
+	response, err := listCall.Do()
 	if err != nil {
-		log.Fatalf("Error creating playlist service: %v", err)
+		return fmt.Errorf("error retrieving playlists: %s", err)
 	}
 
-	call := service.Playlists.List("snippet,contentDetails")
-	call = call.Mine(true)
-	response, err := call.Do()
-	if err != nil {
-		log.Fatalf("Error creating YouTube client: %v", err)
+	var playlist *youtube.Playlist
+	for _, pl := range response.Items {
+		if pl.Id == playlistID {
+			playlist = pl
+		}
 	}
 
-	for _, i := range response.Items {
-		fmt.Printf("res %+v\n", i.Snippet.Title)
+	// TODO: handle creation of playlist
+	if playlist == nil {
+		return fmt.Errorf("playlist '%s' doesn't exist", playlistID)
 	}
+
+	updateCall := service.Playlists.Update("snippet,status", playlist)
+	_, err = updateCall.Do()
+	if err != nil {
+		return fmt.Errorf("error updating playlist: %s", err)
+	}
+
+	return nil
+}
+
+func LoadVideoMeta(filename string, video *youtube.Video) (videoMeta VideoMeta) {
+
+	// attempt to load from meta JSON, otherwise use values specified from command line flags
+	if filename != "" {
+		file, e := ioutil.ReadFile(filename)
+		if e != nil {
+			fmt.Printf("Could not read filename file '%s': %s\n", filename, e)
+			fmt.Println("Will use command line flags instead")
+			goto errJump
+		}
+
+		e = json.Unmarshal(file, &videoMeta)
+		if e != nil {
+			fmt.Printf("Could not read filename file '%s': %s\n", filename, e)
+			fmt.Println("Will use command line flags instead")
+			goto errJump
+		}
+
+		video.Snippet.Tags = videoMeta.Tags
+		video.Snippet.Title = videoMeta.Title
+		video.Snippet.Description = videoMeta.Description
+		video.Snippet.CategoryId = videoMeta.CategoryId
+		if videoMeta.PrivacyStatus != "" {
+			video.Status.PrivacyStatus = videoMeta.PrivacyStatus
+		}
+		if videoMeta.Location != nil {
+			video.RecordingDetails.Location = videoMeta.Location
+		}
+		if videoMeta.LocationDescription != "" {
+			video.RecordingDetails.LocationDescription = videoMeta.LocationDescription
+		}
+		if !videoMeta.RecordingDate.IsZero() {
+			video.RecordingDetails.RecordingDate = videoMeta.RecordingDate.Format(outputDateLayout)
+		}
+	}
+errJump:
+
+	if video.Status.PrivacyStatus == "" {
+		video.Status = &youtube.VideoStatus{PrivacyStatus: *privacy}
+	}
+	if video.Snippet.Tags == nil && strings.Trim(*tags, "") != "" {
+		video.Snippet.Tags = strings.Split(*tags, ",")
+	}
+	if video.Snippet.Title == "" {
+		video.Snippet.Title = *title
+	}
+	if video.Snippet.Description == "" {
+		video.Snippet.Description = *description
+	}
+	if video.Snippet.CategoryId == "" && *categoryId != "" {
+		video.Snippet.CategoryId = *categoryId
+	}
+
+	return
 }
