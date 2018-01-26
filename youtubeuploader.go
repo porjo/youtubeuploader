@@ -130,7 +130,7 @@ func main() {
 			}
 		}()
 	}
-	client, err := buildOAuthHTTPClient(ctx, youtube.YoutubeScope+" "+youtube.YoutubeUploadScope+" "+youtube.YoutubeReadonlyScope)
+	client, err := buildOAuthHTTPClient(ctx, youtube.YoutubeUploadScope)
 	if err != nil {
 		log.Fatalf("Error building OAuth client: %v", err)
 	}
