@@ -130,7 +130,7 @@ func main() {
 			}
 		}()
 	}
-	client, err := buildOAuthHTTPClient(ctx, youtube.YoutubeUploadScope)
+	client, err := buildOAuthHTTPClient(ctx, []string{youtube.YoutubeUploadScope, youtube.YoutubeScope})
 	if err != nil {
 		log.Fatalf("Error building OAuth client: %v", err)
 	}
@@ -145,7 +145,7 @@ func main() {
 
 	service, err := youtube.New(client)
 	if err != nil {
-		log.Fatalf("Error creating playlist service: %s", err)
+		log.Fatalf("Error creating Youtube client: %s", err)
 	}
 
 	if upload.Status.PrivacyStatus == "" {
