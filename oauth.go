@@ -104,7 +104,7 @@ func openURL(url string) error {
 
 // readConfig reads the configuration from clientSecretsFile.
 // It returns an oauth configuration object for use with the Google API client.
-func readConfig(scope string) (*oauth2.Config, error) {
+func readConfig(scopes []string) (*oauth2.Config, error) {
 	// Read the secrets file
 	data, err := ioutil.ReadFile(*clientSecretsFile)
 	if err != nil {
@@ -133,7 +133,7 @@ func readConfig(scope string) (*oauth2.Config, error) {
 	oCfg = &oauth2.Config{
 		ClientID:     cfg2.ClientID,
 		ClientSecret: cfg2.ClientSecret,
-		Scopes:       []string{scope},
+		Scopes:       scopes,
 		Endpoint: oauth2.Endpoint{
 			AuthURL:  cfg2.AuthURI,
 			TokenURL: cfg2.TokenURI,
@@ -169,8 +169,8 @@ func startWebServer() (callbackCh chan CallbackStatus, err error) {
 // the redirect completes to the /oauth2callback URI.
 // It returns an instance of an HTTP client that can be passed to the
 // constructor of the YouTube client.
-func buildOAuthHTTPClient(ctx context.Context, scope string) (*http.Client, error) {
-	config, err := readConfig(scope)
+func buildOAuthHTTPClient(ctx context.Context, scopes []string) (*http.Client, error) {
+	config, err := readConfig(scopes)
 	if err != nil {
 		msg := fmt.Sprintf("Cannot read configuration file: %v", err)
 		return nil, errors.New(msg)
