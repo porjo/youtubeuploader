@@ -2,8 +2,6 @@
 
 > sha256-checksums
 
-#(env GOOS=linux GOARCH=arm GOARM=5 go build -o youtubeuploader_linux_armv5; gzip youtubeuploader_linux_armv5) &
-#(env GOOS=linux GOARCH=arm GOARM=6 go build -o youtubeuploader_linux_armv6; gzip youtubeuploader_linux_armv6) &
 (env GOOS=linux GOARCH=arm GOARM=7 go build -o youtubeuploader_linux_armv7; gzip youtubeuploader_linux_armv7; sha256sum youtubeuploader_linux_armv7.gz >> sha256-checksums) &
 (env GOOS=linux GOARCH=arm64 go build -o youtubeuploader_linux_arm64; gzip youtubeuploader_linux_arm64; sha256sum youtubeuploader_linux_arm64.gz >> sha256-checksums) &
 (env GOOS=linux GOARCH=amd64 go build -o youtubeuploader_linux_amd64; gzip youtubeuploader_linux_amd64; sha256sum youtubeuploader_linux_amd64.gz >> sha256-checksums) &
