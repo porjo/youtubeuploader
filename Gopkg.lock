@@ -2,10 +2,10 @@
 
 
 [[projects]]
-  branch = "master"
   name = "github.com/golang/protobuf"
   packages = ["proto"]
-  revision = "1e59b77b52bf8e4b449a57e6f79f21226d571845"
+  revision = "925541529c1fa6821df4e44ce2723319eb2be768"
+  version = "v1.0.0"
 
 [[projects]]
   branch = "master"
@@ -16,24 +16,43 @@
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
-  packages = ["context","context/ctxhttp"]
-  revision = "5ccada7d0a7ba9aeb5d3aca8d3501b4c2a509fec"
+  packages = [
+    "context",
+    "context/ctxhttp"
+  ]
+  revision = "d25186b37f34ebdbbea8f488ef055638dfab272d"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/oauth2"
-  packages = [".","internal"]
-  revision = "30785a2c434e431ef7c507b54617d6a951d5f2b4"
+  packages = [
+    ".",
+    "internal"
+  ]
+  revision = "2f32c3ac0fa4fb807a0fcefb0b6f2468a0d99bd0"
 
 [[projects]]
   branch = "master"
   name = "google.golang.org/api"
-  packages = ["gensupport","googleapi","googleapi/internal/uritemplates","youtube/v3"]
-  revision = "37df4fabefb044819e927f44b8487d4cd926d06c"
+  packages = [
+    "gensupport",
+    "googleapi",
+    "googleapi/internal/uritemplates",
+    "youtube/v3"
+  ]
+  revision = "8dd9492f46214d3ecd264e970de1cf530c51c12e"
 
 [[projects]]
   name = "google.golang.org/appengine"
-  packages = ["internal","internal/base","internal/datastore","internal/log","internal/remote_api","internal/urlfetch","urlfetch"]
+  packages = [
+    "internal",
+    "internal/base",
+    "internal/datastore",
+    "internal/log",
+    "internal/remote_api",
+    "internal/urlfetch",
+    "urlfetch"
+  ]
   revision = "150dc57a1b433e64154302bdc40b6bb8aefa313a"
   version = "v1.0.0"
 
