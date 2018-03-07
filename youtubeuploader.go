@@ -67,6 +67,7 @@ type VideoMeta struct {
 	LocationDescription string            `json:"locationDescription, omitempty"`
 	RecordingDate       Date              `json:"recordingDate, omitempty"`
 
+	// single playistID retained for backwards compatibility
 	PlaylistID  string   `json:"playlistId, omitempty"`
 	PlaylistIDs []string `json:"playlistIds, omitempty"`
 }
