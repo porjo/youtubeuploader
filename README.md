@@ -111,7 +111,6 @@ Video title, description etc can specified via the command line flags or via a J
     "longitude": 2.2945
   },
   "locationDescription":  "Eiffel Tower",
-  "playlistId":  "xxxxxxxxyyyyyyyyyy",
   "playlistIds":  ["xxxxxxxxyyyyyyyyyy", "aaaaaaaaaaaabbbbbb"]
 }
 ```
