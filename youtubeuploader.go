@@ -67,7 +67,8 @@ type VideoMeta struct {
 	LocationDescription string            `json:"locationDescription, omitempty"`
 	RecordingDate       Date              `json:"recordingDate, omitempty"`
 
-	PlaylistID string `json:"playlistId, omitempty"`
+	PlaylistID  string   `json:"playlistId, omitempty"`
+	PlaylistIDs []string `json:"playlistIds, omitempty"`
 }
 
 const inputDateLayout = "2006-01-02"
@@ -196,6 +197,14 @@ func main() {
 		err = AddVideoToPlaylist(service, videoMeta.PlaylistID, video.Id)
 		if err != nil {
 			log.Fatalf("Error adding video to playlist: %s", err)
+		}
+	}
+	if len(videoMeta.PlaylistIDs) > 0 {
+		for _, pid := range videoMeta.PlaylistIDs {
+			err = AddVideoToPlaylist(service, pid, video.Id)
+			if err != nil {
+				log.Fatalf("Error adding video to playlist: %s", err)
+			}
 		}
 	}
 	if thumbReader != nil {
