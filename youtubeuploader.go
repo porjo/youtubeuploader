@@ -44,6 +44,7 @@ var (
 	privacy      = flag.String("privacy", "private", "Video privacy status")
 	quiet        = flag.Bool("quiet", false, "Suppress progress indicator")
 	rate         = flag.Int("ratelimit", 0, "Rate limit upload in kbps. No limit by default")
+	limitBetween = flag.String("limitBetween", "00:00-23:59", "Only rate limit between these times (local time zone)")
 	metaJSON     = flag.String("metaJSON", "", "JSON file containing title,description,tags etc (optional)")
 	headlessAuth = flag.Bool("headlessAuth", false, "set this if host does not have browser available for oauth authorisation step")
 )
@@ -75,6 +76,7 @@ type VideoMeta struct {
 	Language string `json:"language, omitempty"`
 }
 
+const inputTimeLayout = "15:04"
 const inputDateLayout = "2006-01-02"
 const outputDateLayout = "2006-01-02T15:04:05.000Z" //ISO 8601 (YYYY-MM-DDThh:mm:ss.sssZ)
 
@@ -91,6 +93,13 @@ func main() {
 		os.Exit(1)
 	}
 
+	limitTimes, err := parseLimitBetween(*limitBetween)
+	if err != nil {
+		fmt.Printf("Invalid value for -limitBetween: %v", err)
+		flag.PrintDefaults()
+		os.Exit(1)
+	}
+
 	reader, filesize := Open(*filename)
 	defer reader.Close()
 
@@ -101,7 +110,7 @@ func main() {
 	}
 
 	ctx := context.Background()
-	transport := &limitTransport{rt: http.DefaultTransport, filesize: filesize}
+	transport := &limitTransport{rt: http.DefaultTransport, times: limitTimes, filesize: filesize}
 	ctx = context.WithValue(ctx, oauth2.HTTPClient, &http.Client{
 		Transport: transport,
 	})
@@ -223,6 +232,7 @@ func main() {
 
 type limitTransport struct {
 	rt       http.RoundTripper
+	times    [2]int
 	reader   *flowrate.Reader
 	filesize int64
 }
@@ -236,8 +246,8 @@ func (t *limitTransport) RoundTrip(r *http.Request) (res *http.Response, err err
 			monitor = t.reader.Monitor
 		}
 
-		// kbit/s to B/s = 1000/8 = 125
-		t.reader = flowrate.NewReader(r.Body, int64(*rate*125))
+		// limit is set in limitChecker.Read
+		t.reader = flowrate.NewReader(r.Body, 0)
 
 		if monitor != nil {
 			// carry over stats to new limiter
@@ -245,7 +255,7 @@ func (t *limitTransport) RoundTrip(r *http.Request) (res *http.Response, err err
 		} else {
 			t.reader.Monitor.SetTransferSize(t.filesize)
 		}
-		r.Body = ioutil.NopCloser(t.reader)
+		r.Body = &limitChecker{t.times, t.reader}
 	}
 
 	return t.rt.RoundTrip(r)
@@ -392,4 +402,59 @@ func Open(filename string) (reader io.ReadCloser, filesize int64) {
 	}
 
 	return file, fileInfo.Size()
+}
+
+func parseLimitBetween(between string) ([2]int, error) {
+	parts := strings.Split(between, "-")
+	if len(parts) != 2 {
+		return [2]int{}, fmt.Errorf("limitBetween should have 2 parts separated by a hyphen")
+	}
+
+	start, err := time.ParseInLocation(inputTimeLayout, parts[0], time.Local)
+	if err != nil {
+		return [2]int{}, fmt.Errorf("limitBetween start time was invalid: %v", err)
+	}
+
+	end, err := time.ParseInLocation(inputTimeLayout, parts[1], time.Local)
+	if err != nil {
+		return [2]int{}, fmt.Errorf("limitBetween end time was invalid: %v", err)
+	}
+
+	sh, sm, _ := start.Clock()
+	eh, em, _ := end.Clock()
+	return [2]int{sh*60 + sm, eh*60 + em}, nil
+}
+
+type limitChecker struct {
+	limits [2]int
+	reader *flowrate.Reader
+}
+
+func (lc *limitChecker) Read(p []byte) (n int, err error) {
+	h, m, _ := time.Now().Clock()
+
+	// minutes since start of rate limit period
+	start := h*60 + m - lc.limits[0]
+	if start < 0 {
+		start += 24 * 60
+	}
+
+	// minutes since end of rate limit period
+	end := h*60 + m - lc.limits[1]
+	if end < 0 {
+		end += 24 * 60
+	}
+
+	if start > end {
+		lc.reader.SetLimit(0)
+	} else {
+		// kbit/s to B/s = 1000/8 = 125
+		lc.reader.SetLimit(int64(*rate * 125))
+	}
+
+	return lc.reader.Read(p)
+}
+
+func (lc *limitChecker) Close() error {
+	return nil
 }
