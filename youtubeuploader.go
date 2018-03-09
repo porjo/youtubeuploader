@@ -70,6 +70,9 @@ type VideoMeta struct {
 	// single playistID retained for backwards compatibility
 	PlaylistID  string   `json:"playlistId, omitempty"`
 	PlaylistIDs []string `json:"playlistIds, omitempty"`
+
+	// BCP-47 language code e.g. 'en','es'
+	Language string `json:"language, omitempty"`
 }
 
 const inputDateLayout = "2006-01-02"
@@ -326,6 +329,10 @@ func LoadVideoMeta(filename string, video *youtube.Video) (videoMeta VideoMeta) 
 		}
 		if !videoMeta.RecordingDate.IsZero() {
 			video.RecordingDetails.RecordingDate = videoMeta.RecordingDate.Format(outputDateLayout)
+		}
+		if videoMeta.Language != "" {
+			video.Snippet.DefaultLanguage = videoMeta.Language
+			video.Snippet.DefaultAudioLanguage = videoMeta.Language
 		}
 	}
 errJump:

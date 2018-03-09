@@ -111,7 +111,8 @@ Video title, description etc can specified via the command line flags or via a J
     "longitude": 2.2945
   },
   "locationDescription":  "Eiffel Tower",
-  "playlistIds":  ["xxxxxxxxyyyyyyyyyy", "aaaaaaaaaaaabbbbbb"]
+  "playlistIds":  ["xxxxxxxxxxxxxxxxxx", "yyyyyyyyyyyyyyyyyy"],
+  "language":  "fr"
 }
 ```
 All fields are optional. Command line flags will be used by default (where available). Use `\n` in the description to insert newlines.
