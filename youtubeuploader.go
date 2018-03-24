@@ -47,6 +47,7 @@ var (
 	metaJSON       = flag.String("metaJSON", "", "JSON file containing title,description,tags etc (optional)")
 	headlessAuth   = flag.Bool("headlessAuth", false, "set this if host does not have browser available for oauth authorisation step")
 	showAppVersion = flag.Bool("v", false, "show version")
+	chunksize      = flag.Int("chunksize", googleapi.DefaultUploadChunkSize, "size (in bytes) of each upload piece")
 
 	// this is set by compile-time to match git tag
 	appVersion string
@@ -183,12 +184,12 @@ func main() {
 	var option googleapi.MediaOption
 	var video *youtube.Video
 
-	// our RoundTrip gets bypassed if the filesize < DefaultUploadChunkSize
-	if googleapi.DefaultUploadChunkSize > filesize {
-		option = googleapi.ChunkSize(int(filesize / 2))
-	} else {
-		option = googleapi.ChunkSize(googleapi.DefaultUploadChunkSize)
+	// progress output is never called when the chunksize > filesize
+	if int64(*chunksize) > filesize {
+		*chunksize = int(filesize / 2)
+		fmt.Printf("Adjusting chunksize to %d\n", *chunksize)
 	}
+	option = googleapi.ChunkSize(*chunksize)
 
 	call := service.Videos.Insert("snippet,status,recordingDetails", upload)
 	video, err = call.Media(reader, option).Do()
