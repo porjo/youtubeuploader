@@ -64,12 +64,14 @@ Full list of options:
     	Token cache file (default "request.token")
   -categoryId string
     	Video category Id
+  -chunksize int
+    	size (in bytes) of each upload chunk. A zero value will cause all data to be uploaded in a single request (default 8388608)
   -description string
     	Video description (default "uploaded by youtubeuploader")
   -filename string
     	Filename to upload. Can be a URL
   -headlessAuth
-    	set this if host does not have browser available for the oauth authorisation step
+    	set this if no browser available for the oauth authorisation step
   -metaJSON string
     	JSON file containing title,description,tags etc (optional)
   -privacy string
@@ -86,6 +88,7 @@ Full list of options:
     	Thumbnail to upload. Can be a URL
   -title string
     	Video title (default "Video Title")
+  -v	show version
 ```
 *NOTE:* When specifying a URL as the filename, the data will be streamed through the localhost (download from remote host, then upload to Youtube)
 
