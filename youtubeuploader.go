@@ -45,9 +45,9 @@ var (
 	quiet          = flag.Bool("quiet", false, "Suppress progress indicator")
 	rate           = flag.Int("ratelimit", 0, "Rate limit upload in kbps. No limit by default")
 	metaJSON       = flag.String("metaJSON", "", "JSON file containing title,description,tags etc (optional)")
-	headlessAuth   = flag.Bool("headlessAuth", false, "set this if host does not have browser available for oauth authorisation step")
+	headlessAuth   = flag.Bool("headlessAuth", false, "set this if no browser available for the oauth authorisation step")
 	showAppVersion = flag.Bool("v", false, "show version")
-	chunksize      = flag.Int("chunksize", googleapi.DefaultUploadChunkSize, "size (in bytes) of each upload piece")
+	chunksize      = flag.Int("chunksize", googleapi.DefaultUploadChunkSize, "size (in bytes) of each upload chunk. A zero value will cause all data to be uploaded in a single request")
 
 	// this is set by compile-time to match git tag
 	appVersion string
