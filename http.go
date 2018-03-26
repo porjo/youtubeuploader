@@ -16,15 +16,17 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/http"
 
 	"github.com/porjo/go-flowrate/flowrate"
 	"google.golang.org/api/youtube/v3"
 )
 
+const inputTimeLayout = "15:04"
+
 type limitTransport struct {
 	rt       http.RoundTripper
+	lr       limitRange
 	reader   *flowrate.Reader
 	filesize int64
 }
@@ -65,8 +67,8 @@ func (t *limitTransport) RoundTrip(r *http.Request) (res *http.Response, err err
 			monitor = t.reader.Monitor
 		}
 
-		// kbit/s to B/s = 1000/8 = 125
-		t.reader = flowrate.NewReader(r.Body, int64(*rate*125))
+		// limit is set in limitChecker.Read
+		t.reader = flowrate.NewReader(r.Body, 0)
 
 		if monitor != nil {
 			// carry over stats to new limiter
@@ -74,7 +76,7 @@ func (t *limitTransport) RoundTrip(r *http.Request) (res *http.Response, err err
 		} else {
 			t.reader.Monitor.SetTransferSize(t.filesize)
 		}
-		r.Body = ioutil.NopCloser(t.reader)
+		r.Body = &limitChecker{t.lr, t.reader}
 	}
 
 	return t.rt.RoundTrip(r)
