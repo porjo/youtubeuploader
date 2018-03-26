@@ -42,6 +42,7 @@ var (
 	quiet          = flag.Bool("quiet", false, "Suppress progress indicator")
 	rate           = flag.Int("ratelimit", 0, "Rate limit upload in kbps. No limit by default")
 	metaJSON       = flag.String("metaJSON", "", "JSON file containing title,description,tags etc (optional)")
+	limitBetween   = flag.String("limitBetween", "00:00-23:59", "Only rate limit between these times (local time zone)")
 	headlessAuth   = flag.Bool("headlessAuth", false, "set this if no browser available for the oauth authorisation step")
 	showAppVersion = flag.Bool("v", false, "show version")
 	chunksize      = flag.Int("chunksize", googleapi.DefaultUploadChunkSize, "size (in bytes) of each upload chunk. A zero value will cause all data to be uploaded in a single request")
@@ -64,6 +65,16 @@ func main() {
 		os.Exit(1)
 	}
 
+	var limitRange limitRange
+	if *limitBetween != "" {
+		var err error
+		limitRange, err = parseLimitBetween(*limitBetween)
+		if err != nil {
+			fmt.Printf("Invalid value for -limitBetween: %v", err)
+			os.Exit(1)
+		}
+	}
+
 	reader, filesize := Open(*filename)
 	defer reader.Close()
 
@@ -74,7 +85,7 @@ func main() {
 	}
 
 	ctx := context.Background()
-	transport := &limitTransport{rt: http.DefaultTransport, filesize: filesize}
+	transport := &limitTransport{rt: http.DefaultTransport, lr: limitRange, filesize: filesize}
 	ctx = context.WithValue(ctx, oauth2.HTTPClient, &http.Client{
 		Transport: transport,
 	})
