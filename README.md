@@ -72,6 +72,8 @@ Full list of options:
     	Filename to upload. Can be a URL
   -headlessAuth
     	set this if no browser available for the oauth authorisation step
+  -limitBetween string
+    	Only rate limit between these times (local time zone) (default "00:00-23:59")
   -metaJSON string
     	JSON file containing title,description,tags etc (optional)
   -privacy string
