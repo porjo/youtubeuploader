@@ -7,7 +7,9 @@ Scripted uploads to youtube.
 
 ## Download
 
-Grab a [precompiled binary](https://github.com/porjo/youtubeuploader/releases) for Linux, Mac or Windows or build it yourself.
+Grab a [precompiled binary](https://github.com/porjo/youtubeuploader/releases)^ for Linux, Mac or Windows or build it yourself.
+
+_^ The binaries are compressed so you need to unpack them and give them executable permissions (e.g. chmod +x)_
 
 ## Build
 
@@ -73,7 +75,7 @@ Full list of options:
   -headlessAuth
     	set this if no browser available for the oauth authorisation step
   -limitBetween string
-    	Only rate limit between these times (local time zone) (default "00:00-23:59")
+    	Only rate limit between these times e.g. 10:00-14:00 (local time zone)
   -metaJSON string
     	JSON file containing title,description,tags etc (optional)
   -privacy string
