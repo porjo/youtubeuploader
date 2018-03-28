@@ -136,11 +136,6 @@ func main() {
 	var option googleapi.MediaOption
 	var video *youtube.Video
 
-	// progress output is never called when the chunksize > filesize
-	if int64(*chunksize) > filesize {
-		*chunksize = int(filesize / 2)
-		fmt.Printf("Adjusting chunksize to %d\n", *chunksize)
-	}
 	option = googleapi.ChunkSize(*chunksize)
 
 	call := service.Videos.Insert("snippet,status,recordingDetails", upload)

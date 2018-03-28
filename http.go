@@ -17,6 +17,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/porjo/go-flowrate/flowrate"
 	"google.golang.org/api/youtube/v3"
@@ -59,8 +60,10 @@ type VideoMeta struct {
 }
 
 func (t *limitTransport) RoundTrip(r *http.Request) (res *http.Response, err error) {
-	// FIXME need a better way to detect which roundtrip is the media upload
-	if r.ContentLength > 1000 {
+
+	// Content-Type starts with 'multipart/related' for chunksize 0 and 'video' for other chunksizes
+	if strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/related") ||
+		strings.HasPrefix(r.Header.Get("Content-Type"), "video") {
 		var monitor *flowrate.Monitor
 
 		if t.reader != nil {
