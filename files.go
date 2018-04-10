@@ -29,7 +29,7 @@ import (
 	"google.golang.org/api/youtube/v3"
 )
 
-const outputDateLayout = "2006-01-02T15:04:05.000Z" //ISO 8601 (YYYY-MM-DDThh:mm:ss.sssZ)
+const ytDateLayout = "2006-01-02T15:04:05.000Z" // ISO 8601 (YYYY-MM-DDThh:mm:ss.sssZ)
 const inputDateLayout = "2006-01-02"
 
 type Date struct {
@@ -53,13 +53,11 @@ func LoadVideoMeta(filename string, video *youtube.Video) (videoMeta VideoMeta) 
 			goto errJump
 		}
 
+		video.Status = &youtube.VideoStatus{}
 		video.Snippet.Tags = videoMeta.Tags
 		video.Snippet.Title = videoMeta.Title
 		video.Snippet.Description = videoMeta.Description
 		video.Snippet.CategoryId = videoMeta.CategoryId
-		if videoMeta.PrivacyStatus != "" {
-			video.Status.PrivacyStatus = videoMeta.PrivacyStatus
-		}
 		if videoMeta.Location != nil {
 			video.RecordingDetails.Location = videoMeta.Location
 		}
@@ -67,8 +65,30 @@ func LoadVideoMeta(filename string, video *youtube.Video) (videoMeta VideoMeta) 
 			video.RecordingDetails.LocationDescription = videoMeta.LocationDescription
 		}
 		if !videoMeta.RecordingDate.IsZero() {
-			video.RecordingDetails.RecordingDate = videoMeta.RecordingDate.Format(outputDateLayout)
+			video.RecordingDetails.RecordingDate = videoMeta.RecordingDate.Format(ytDateLayout)
 		}
+
+		// status
+		if videoMeta.PrivacyStatus != "" {
+			video.Status.PrivacyStatus = videoMeta.PrivacyStatus
+		}
+		if videoMeta.Embeddable {
+			video.Status.Embeddable = videoMeta.Embeddable
+		}
+		if videoMeta.License != "" {
+			video.Status.License = videoMeta.License
+		}
+		if videoMeta.PublicStatsViewable {
+			video.Status.PublicStatsViewable = videoMeta.PublicStatsViewable
+		}
+		if !videoMeta.PublishAt.IsZero() {
+			if videoMeta.PublishAt.Before(time.Now()) {
+				video.Status.PublishAt = time.Now().Format(ytDateLayout)
+			} else {
+				video.Status.PublishAt = videoMeta.PublishAt.Format(ytDateLayout)
+			}
+		}
+
 		if videoMeta.Language != "" {
 			video.Snippet.DefaultLanguage = videoMeta.Language
 			video.Snippet.DefaultAudioLanguage = videoMeta.Language
@@ -77,7 +97,7 @@ func LoadVideoMeta(filename string, video *youtube.Video) (videoMeta VideoMeta) 
 errJump:
 
 	if video.Status.PrivacyStatus == "" {
-		video.Status = &youtube.VideoStatus{PrivacyStatus: *privacy}
+		video.Status.PrivacyStatus = *privacy
 	}
 	if video.Snippet.Tags == nil && strings.Trim(*tags, "") != "" {
 		video.Snippet.Tags = strings.Split(*tags, ",")
@@ -136,6 +156,11 @@ func Open(filename string) (reader io.ReadCloser, filesize int64) {
 func (d *Date) UnmarshalJSON(b []byte) (err error) {
 	s := string(b)
 	s = s[1 : len(s)-1]
-	d.Time, err = time.Parse(inputDateLayout, s)
+	// support ISO 8601 and yyyy-mm-dd formats
+	if strings.ContainsAny(s, ":") {
+		d.Time, err = time.Parse(ytDateLayout, s)
+	} else {
+		d.Time, err = time.Parse(inputDateLayout, s)
+	}
 	return
 }

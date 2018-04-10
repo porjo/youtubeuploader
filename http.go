@@ -44,7 +44,7 @@ type VideoMeta struct {
 	Embeddable          bool   `json:"embeddable,omitempty"`
 	License             string `json:"license,omitempty"`
 	PublicStatsViewable bool   `json:"publicStatsViewable,omitempty"`
-	PublishAt           string `json:"publishAt,omitempty"`
+	PublishAt           Date   `json:"publishAt,omitempty"`
 
 	// recording details
 	Location            *youtube.GeoPoint `json:"location,omitempty"`
@@ -60,8 +60,8 @@ type VideoMeta struct {
 }
 
 func (t *limitTransport) RoundTrip(r *http.Request) (res *http.Response, err error) {
-
-	// Content-Type starts with 'multipart/related' for chunksize 0 and 'video' for other chunksizes
+	// Content-Type starts with 'multipart/related' where chunksize >= filesize (including chunksize 0)
+	// and 'video' for other chunksizes
 	if strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/related") ||
 		strings.HasPrefix(r.Header.Get("Content-Type"), "video") {
 		var monitor *flowrate.Monitor
