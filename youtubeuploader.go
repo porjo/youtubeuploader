@@ -48,7 +48,7 @@ var (
 	chunksize      = flag.Int("chunksize", googleapi.DefaultUploadChunkSize, "size (in bytes) of each upload chunk. A zero value will cause all data to be uploaded in a single request")
 
 	// this is set by compile-time to match git tag
-	appVersion string
+	appVersion string = "unknown"
 )
 
 func main() {
