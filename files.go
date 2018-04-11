@@ -31,6 +31,7 @@ import (
 
 const ytDateLayout = "2006-01-02T15:04:05.000Z" // ISO 8601 (YYYY-MM-DDThh:mm:ss.sssZ)
 const inputDateLayout = "2006-01-02"
+const inputDatetimeLayout = "2006-01-02T15:04:05-07:00"
 
 type Date struct {
 	time.Time
@@ -41,14 +42,14 @@ func LoadVideoMeta(filename string, video *youtube.Video) (videoMeta VideoMeta) 
 	if filename != "" {
 		file, e := ioutil.ReadFile(filename)
 		if e != nil {
-			fmt.Printf("Could not read filename file '%s': %s\n", filename, e)
+			fmt.Printf("Error reading file '%s': %s\n", filename, e)
 			fmt.Println("Will use command line flags instead")
 			goto errJump
 		}
 
 		e = json.Unmarshal(file, &videoMeta)
 		if e != nil {
-			fmt.Printf("Could not read filename file '%s': %s\n", filename, e)
+			fmt.Printf("Error parsing file '%s': %s\n", filename, e)
 			fmt.Println("Will use command line flags instead")
 			goto errJump
 		}
@@ -65,7 +66,7 @@ func LoadVideoMeta(filename string, video *youtube.Video) (videoMeta VideoMeta) 
 			video.RecordingDetails.LocationDescription = videoMeta.LocationDescription
 		}
 		if !videoMeta.RecordingDate.IsZero() {
-			video.RecordingDetails.RecordingDate = videoMeta.RecordingDate.Format(ytDateLayout)
+			video.RecordingDetails.RecordingDate = videoMeta.RecordingDate.UTC().Format(ytDateLayout)
 		}
 
 		// status
@@ -83,9 +84,9 @@ func LoadVideoMeta(filename string, video *youtube.Video) (videoMeta VideoMeta) 
 		}
 		if !videoMeta.PublishAt.IsZero() {
 			if videoMeta.PublishAt.Before(time.Now()) {
-				video.Status.PublishAt = time.Now().Format(ytDateLayout)
+				video.Status.PublishAt = time.Now().UTC().Format(ytDateLayout)
 			} else {
-				video.Status.PublishAt = videoMeta.PublishAt.Format(ytDateLayout)
+				video.Status.PublishAt = videoMeta.PublishAt.UTC().Format(ytDateLayout)
 			}
 		}
 
@@ -156,9 +157,9 @@ func Open(filename string) (reader io.ReadCloser, filesize int64) {
 func (d *Date) UnmarshalJSON(b []byte) (err error) {
 	s := string(b)
 	s = s[1 : len(s)-1]
-	// support ISO 8601 and yyyy-mm-dd formats
+	// support ISO 8601 date only, and date + time
 	if strings.ContainsAny(s, ":") {
-		d.Time, err = time.Parse(ytDateLayout, s)
+		d.Time, err = time.Parse(inputDatetimeLayout, s)
 	} else {
 		d.Time, err = time.Parse(inputDateLayout, s)
 	}

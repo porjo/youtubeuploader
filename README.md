@@ -110,7 +110,7 @@ Video title, description etc can specified via the command line flags or via a J
   "embeddable": true,
   "license": "creativeCommon",
   "publicStatsViewable": true,
-  "publishAt": "2017-06-01T12:00:00.000+02:00",
+  "publishAt": "2017-06-01T12:00:00+02:00",
   "categoryId": "10",
   "recordingdate": "2017-05-21",
   "location": {
@@ -122,7 +122,9 @@ Video title, description etc can specified via the command line flags or via a J
   "language":  "fr"
 }
 ```
-All fields are optional. Command line flags will be used by default (where available). Use `\n` in the description to insert newlines.
+- all fields are optional. Command line flags will be used by default (where available)
+- use `\n` in the description to insert newlines
+- times can be provided in one of two formats: `yyyy-mm-dd` (UTC) or `yyyy-mm-ddThh:mm:ss+zz:zz`
 
 ## Alternative Oauth setup for headless clients
 
