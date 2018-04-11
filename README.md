@@ -110,7 +110,7 @@ Video title, description etc can specified via the command line flags or via a J
   "embeddable": true,
   "license": "creativeCommon",
   "publicStatsViewable": true,
-  "publishAt": "2017-06-01T12:00:00.000+02:00",
+  "publishAt": "2017-06-01T12:00:00.000Z",
   "categoryId": "10",
   "recordingdate": "2017-05-21",
   "location": {
