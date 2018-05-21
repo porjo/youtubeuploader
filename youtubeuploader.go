@@ -156,20 +156,38 @@ func main() {
 	}
 	fmt.Printf("Upload successful! Video ID: %v\n", video.Id)
 
+	plx := &Playlistx{}
+	// PlaylistID is deprecated in favour of PlaylistIDs
 	if videoMeta.PlaylistID != "" {
-		err = AddVideoToPlaylist(service, videoMeta.PlaylistID, video.Id)
+		plx.Id = videoMeta.PlaylistID
+		err = plx.AddVideoToPlaylist(service, video.Id)
 		if err != nil {
 			log.Fatalf("Error adding video to playlist: %s", err)
 		}
 	}
+
 	if len(videoMeta.PlaylistIDs) > 0 {
+		plx.Title = ""
 		for _, pid := range videoMeta.PlaylistIDs {
-			err = AddVideoToPlaylist(service, pid, video.Id)
+			plx.Id = pid
+			err = plx.AddVideoToPlaylist(service, video.Id)
 			if err != nil {
 				log.Fatalf("Error adding video to playlist: %s", err)
 			}
 		}
 	}
+
+	if len(videoMeta.PlaylistTitles) > 0 {
+		plx.Id = ""
+		for _, title := range videoMeta.PlaylistTitles {
+			plx.Title = title
+			err = plx.AddVideoToPlaylist(service, video.Id)
+			if err != nil {
+				log.Fatalf("Error adding video to playlist: %s", err)
+			}
+		}
+	}
+
 	if thumbReader != nil {
 		log.Printf("Uploading thumbnail '%s'...\n", *thumbnail)
 		_, err = service.Thumbnails.Set(video.Id).Media(thumbReader).Do()
