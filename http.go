@@ -32,6 +32,11 @@ type limitTransport struct {
 	filesize int64
 }
 
+type Playlistx struct {
+	Id    string
+	Title string
+}
+
 type VideoMeta struct {
 	// snippet
 	Title       string   `json:"title,omitempty"`
@@ -48,15 +53,16 @@ type VideoMeta struct {
 
 	// recording details
 	Location            *youtube.GeoPoint `json:"location,omitempty"`
-	LocationDescription string            `json:"locationDescription, omitempty"`
-	RecordingDate       Date              `json:"recordingDate, omitempty"`
+	LocationDescription string            `json:"locationDescription,omitempty"`
+	RecordingDate       Date              `json:"recordingDate,omitempty"`
 
-	// single playistID retained for backwards compatibility
-	PlaylistID  string   `json:"playlistId, omitempty"`
-	PlaylistIDs []string `json:"playlistIds, omitempty"`
+	// PlaylistID is deprecated in favour of PlaylistIDs
+	PlaylistID     string   `json:"playlistId,omitempty"`
+	PlaylistIDs    []string `json:"playlistIds,omitempty"`
+	PlaylistTitles []string `json:"playlistTitles,omitempty"`
 
 	// BCP-47 language code e.g. 'en','es'
-	Language string `json:"language, omitempty"`
+	Language string `json:"language,omitempty"`
 }
 
 func (t *limitTransport) RoundTrip(r *http.Request) (res *http.Response, err error) {
@@ -85,7 +91,7 @@ func (t *limitTransport) RoundTrip(r *http.Request) (res *http.Response, err err
 	return t.rt.RoundTrip(r)
 }
 
-func AddVideoToPlaylist(service *youtube.Service, playlistID, videoID string) (err error) {
+func (plx *Playlistx) AddVideoToPlaylist(service *youtube.Service, videoID string) (err error) {
 	listCall := service.Playlists.List("snippet,contentDetails")
 	listCall = listCall.Mine(true)
 	response, err := listCall.Do()
@@ -95,19 +101,29 @@ func AddVideoToPlaylist(service *youtube.Service, playlistID, videoID string) (e
 
 	var playlist *youtube.Playlist
 	for _, pl := range response.Items {
-		if pl.Id == playlistID {
+		if pl.Id == plx.Id || pl.Snippet.Title == plx.Title {
 			playlist = pl
 			break
 		}
 	}
 
-	// TODO: handle creation of playlist
+	// create playlist if it doesn't exist
 	if playlist == nil {
-		return fmt.Errorf("playlist ID '%s' doesn't exist", playlistID)
+		if plx.Id != "" {
+			return fmt.Errorf("playlist ID '%s' doesn't exist", plx.Id)
+		}
+		playlist = &youtube.Playlist{}
+		playlist.Snippet = &youtube.PlaylistSnippet{Title: plx.Title}
+		insertCall := service.Playlists.Insert("snippet", playlist)
+		// API doesn't return playlist ID here!?
+		playlist, err = insertCall.Do()
+		if err != nil {
+			return fmt.Errorf("error creating playlist with title '%s': %s", plx.Title, err)
+		}
 	}
 
 	playlistItem := &youtube.PlaylistItem{}
-	playlistItem.Snippet = &youtube.PlaylistItemSnippet{PlaylistId: playlist.Id}
+	playlistItem.Snippet = &youtube.PlaylistItemSnippet{PlaylistId: playlist.Id, Title: playlist.Snippet.Title}
 	playlistItem.Snippet.ResourceId = &youtube.ResourceId{
 		VideoId: videoID,
 		Kind:    "youtube#video",
@@ -116,7 +132,7 @@ func AddVideoToPlaylist(service *youtube.Service, playlistID, videoID string) (e
 	insertCall := service.PlaylistItems.Insert("snippet", playlistItem)
 	_, err = insertCall.Do()
 	if err != nil {
-		return fmt.Errorf("error inserting video into playlist: %s", err)
+		return err
 	}
 
 	fmt.Printf("Video added to playlist '%s' (%s)\n", playlist.Snippet.Title, playlist.Id)
