@@ -33,8 +33,9 @@ type limitTransport struct {
 }
 
 type Playlistx struct {
-	Id    string
-	Title string
+	Id            string
+	Title         string
+	PrivacyStatus string
 }
 
 type VideoMeta struct {
@@ -114,7 +115,8 @@ func (plx *Playlistx) AddVideoToPlaylist(service *youtube.Service, videoID strin
 		}
 		playlist = &youtube.Playlist{}
 		playlist.Snippet = &youtube.PlaylistSnippet{Title: plx.Title}
-		insertCall := service.Playlists.Insert("snippet", playlist)
+		playlist.Status = &youtube.PlaylistStatus{PrivacyStatus: plx.PrivacyStatus}
+		insertCall := service.Playlists.Insert("snippet,status", playlist)
 		// API doesn't return playlist ID here!?
 		playlist, err = insertCall.Do()
 		if err != nil {

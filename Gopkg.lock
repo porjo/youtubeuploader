@@ -4,8 +4,8 @@
 [[projects]]
   name = "github.com/golang/protobuf"
   packages = ["proto"]
-  revision = "925541529c1fa6821df4e44ce2723319eb2be768"
-  version = "v1.0.0"
+  revision = "b4deda0973fb4c70b50d226b1af49f3da59f5265"
+  version = "v1.1.0"
 
 [[projects]]
   branch = "master"
@@ -20,7 +20,7 @@
     "context",
     "context/ctxhttp"
   ]
-  revision = "d25186b37f34ebdbbea8f488ef055638dfab272d"
+  revision = "9ef9f5bb98a1fdc41f8cf6c250a4404b4085e389"
 
 [[projects]]
   branch = "master"
@@ -29,7 +29,7 @@
     ".",
     "internal"
   ]
-  revision = "2f32c3ac0fa4fb807a0fcefb0b6f2468a0d99bd0"
+  revision = "dd5f5d8e78ce062a4aa881dff95a94f2a0fd405a"
 
 [[projects]]
   branch = "master"
@@ -40,7 +40,7 @@
     "googleapi/internal/uritemplates",
     "youtube/v3"
   ]
-  revision = "8dd9492f46214d3ecd264e970de1cf530c51c12e"
+  revision = "4f7dd2b006a4ffd9fd683c1c734d2fe91ca0ea1c"
 
 [[projects]]
   name = "google.golang.org/appengine"

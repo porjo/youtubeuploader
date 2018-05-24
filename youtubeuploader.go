@@ -157,6 +157,9 @@ func main() {
 	fmt.Printf("Upload successful! Video ID: %v\n", video.Id)
 
 	plx := &Playlistx{}
+	if upload.Status.PrivacyStatus != "" {
+		plx.PrivacyStatus = upload.Status.PrivacyStatus
+	}
 	// PlaylistID is deprecated in favour of PlaylistIDs
 	if videoMeta.PlaylistID != "" {
 		plx.Id = videoMeta.PlaylistID
