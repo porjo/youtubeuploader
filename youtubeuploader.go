@@ -156,6 +156,15 @@ func main() {
 	}
 	fmt.Printf("Upload successful! Video ID: %v\n", video.Id)
 
+	if thumbReader != nil {
+		log.Printf("Uploading thumbnail '%s'...\n", *thumbnail)
+		_, err = service.Thumbnails.Set(video.Id).Media(thumbReader).Do()
+		if err != nil {
+			log.Fatalf("Error making YouTube API call: %v", err)
+		}
+		fmt.Printf("Thumbnail uploaded!\n")
+	}
+
 	plx := &Playlistx{}
 	if upload.Status.PrivacyStatus != "" {
 		plx.PrivacyStatus = upload.Status.PrivacyStatus
@@ -189,14 +198,5 @@ func main() {
 				log.Fatalf("Error adding video to playlist: %s", err)
 			}
 		}
-	}
-
-	if thumbReader != nil {
-		log.Printf("Uploading thumbnail '%s'...\n", *thumbnail)
-		_, err = service.Thumbnails.Set(video.Id).Media(thumbReader).Do()
-		if err != nil {
-			log.Fatalf("Error making YouTube API call: %v", err)
-		}
-		fmt.Printf("Thumbnail uploaded!\n")
 	}
 }
