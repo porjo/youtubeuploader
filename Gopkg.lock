@@ -4,14 +4,14 @@
 [[projects]]
   name = "github.com/golang/protobuf"
   packages = ["proto"]
-  revision = "b4deda0973fb4c70b50d226b1af49f3da59f5265"
-  version = "v1.1.0"
+  revision = "aa810b61a9c79d51363740d207bb46cf8e620ed5"
+  version = "v1.2.0"
 
 [[projects]]
   branch = "master"
   name = "github.com/porjo/go-flowrate"
   packages = ["flowrate"]
-  revision = "fa9daee00a24a92cc8e8f66f408ac5f53826c14c"
+  revision = "b96d1011fd8e35a8287c6b05b46eac3d4075f858"
 
 [[projects]]
   branch = "master"
@@ -20,7 +20,7 @@
     "context",
     "context/ctxhttp"
   ]
-  revision = "9ef9f5bb98a1fdc41f8cf6c250a4404b4085e389"
+  revision = "4dfa2610cdf3b287375bbba5b8f2a14d3b01d8de"
 
 [[projects]]
   branch = "master"
@@ -29,7 +29,7 @@
     ".",
     "internal"
   ]
-  revision = "dd5f5d8e78ce062a4aa881dff95a94f2a0fd405a"
+  revision = "d2e6202438beef2727060aa7cabdd924d92ebfd9"
 
 [[projects]]
   branch = "master"
@@ -40,7 +40,7 @@
     "googleapi/internal/uritemplates",
     "youtube/v3"
   ]
-  revision = "4f7dd2b006a4ffd9fd683c1c734d2fe91ca0ea1c"
+  revision = "5da02d31af7d15cc65a207f8a46a6e3c50d41178"
 
 [[projects]]
   name = "google.golang.org/appengine"
@@ -53,12 +53,12 @@
     "internal/urlfetch",
     "urlfetch"
   ]
-  revision = "150dc57a1b433e64154302bdc40b6bb8aefa313a"
-  version = "v1.0.0"
+  revision = "ae0ab99deb4dc413a2b4bd6c8bdd0eb67f1e4d06"
+  version = "v1.2.0"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "f534d25e8b45b60bb6b5a2986c90b67bd25fc52aadd09f980f2921aa43880c74"
+  inputs-digest = "4a2d3d32d60290050bf879e9c32e00b54be0f2dd209a058e1d28a77634443027"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -15,6 +15,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"io"
@@ -23,7 +24,6 @@ import (
 	"os"
 	"strings"
 
-	"golang.org/x/net/context"
 	"golang.org/x/oauth2"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/youtube/v3"
