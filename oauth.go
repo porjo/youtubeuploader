@@ -15,6 +15,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -28,7 +29,6 @@ import (
 	"runtime"
 	"time"
 
-	"golang.org/x/net/context"
 	"golang.org/x/oauth2"
 )
 
