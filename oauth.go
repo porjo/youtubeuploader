@@ -27,6 +27,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"time"
 
 	"golang.org/x/oauth2"
@@ -146,7 +147,7 @@ func readConfig(scopes []string) (*oauth2.Config, error) {
 // startWebServer starts a web server that listens on http://localhost:8080.
 // The webserver waits for an oauth code in the three-legged auth flow.
 func startWebServer() (callbackCh chan CallbackStatus, err error) {
-	listener, err := net.Listen("tcp", "localhost:8080")
+	listener, err := net.Listen("tcp", ":"+strconv.Itoa(*oAuthPort))
 	if err != nil {
 		return nil, err
 	}

@@ -78,6 +78,8 @@ Full list of options:
     	Only rate limit between these times e.g. 10:00-14:00 (local time zone)
   -metaJSON string
     	JSON file containing title,description,tags etc (optional)
+  -oAuthPort int
+    	TCP port to listen on when requesting an oAuth token (default 8080)
   -privacy string
     	Video privacy status (default "private")
   -quiet
