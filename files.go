@@ -84,9 +84,10 @@ func LoadVideoMeta(filename string, video *youtube.Video) (videoMeta VideoMeta) 
 		}
 		if !videoMeta.PublishAt.IsZero() {
 			if video.Status.PrivacyStatus != "private" {
-				fmt.Printf("publishAt can only be used when privacyStatus is 'public'. Ignoring publishAt...\n")
+				fmt.Printf("publishAt can only be used when privacyStatus is 'private'. Ignoring publishAt...\n")
 			} else {
 				if videoMeta.PublishAt.Before(time.Now()) {
+					fmt.Printf("publishAt (%s) was in the past!? Publishing now instead...\n", videoMeta.PublishAt)
 					video.Status.PublishAt = time.Now().UTC().Format(ytDateLayout)
 				} else {
 					video.Status.PublishAt = videoMeta.PublishAt.UTC().Format(ytDateLayout)
