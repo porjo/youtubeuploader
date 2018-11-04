@@ -64,6 +64,8 @@ Full list of options:
 ```
   -cache string
     	Token cache file (default "request.token")
+  -caption string
+      Caption to upload. Can be a URL
   -categoryId string
     	Video category Id
   -chunksize int
@@ -74,6 +76,8 @@ Full list of options:
     	Filename to upload. Can be a URL
   -headlessAuth
     	set this if no browser available for the oauth authorisation step
+  -language string
+      Video language (default "en")
   -limitBetween string
     	Only rate limit between these times e.g. 10:00-14:00 (local time zone)
   -metaJSON string
