@@ -34,8 +34,10 @@ type chanChan chan chan struct{}
 var (
 	filename       = flag.String("filename", "", "Filename to upload. Can be a URL")
 	thumbnail      = flag.String("thumbnail", "", "Thumbnail to upload. Can be a URL")
+	caption        = flag.String("caption", "", "Caption to upload. Can be URL")
 	title          = flag.String("title", "Video Title", "Video title")
 	description    = flag.String("description", "uploaded by youtubeuploader", "Video description")
+	language       = flag.String("language", "en", "Video language")
 	categoryId     = flag.String("categoryId", "", "Video category Id")
 	tags           = flag.String("tags", "", "Comma separated list of video tags")
 	privacy        = flag.String("privacy", "private", "Video privacy status")
@@ -85,6 +87,12 @@ func main() {
 		defer thumbReader.Close()
 	}
 
+	var captionReader io.ReadCloser
+	if *caption != "" {
+		captionReader, _ = Open(*caption)
+		defer captionReader.Close()
+	}
+
 	ctx := context.Background()
 	transport := &limitTransport{rt: http.DefaultTransport, lr: limitRange, filesize: filesize}
 	ctx = context.WithValue(ctx, oauth2.HTTPClient, &http.Client{
@@ -98,7 +106,7 @@ func main() {
 			Progress(quitChan, transport, filesize)
 		}()
 	}
-	client, err := buildOAuthHTTPClient(ctx, []string{youtube.YoutubeUploadScope, youtube.YoutubeScope})
+	client, err := buildOAuthHTTPClient(ctx, []string{youtube.YoutubeUploadScope, youtube.YoutubepartnerScope, youtube.YoutubeScope})
 	if err != nil {
 		log.Fatalf("Error building OAuth client: %v", err)
 	}
@@ -130,6 +138,12 @@ func main() {
 	}
 	if upload.Snippet.CategoryId == "" && *categoryId != "" {
 		upload.Snippet.CategoryId = *categoryId
+	}
+	if upload.Snippet.DefaultLanguage == "" && *language != "" {
+		upload.Snippet.DefaultLanguage = *language
+	}
+	if upload.Snippet.DefaultAudioLanguage == "" && *language != "" {
+		upload.Snippet.DefaultAudioLanguage = *language
 	}
 
 	fmt.Printf("Uploading file '%s'...\n", *filename)
@@ -164,6 +178,26 @@ func main() {
 			log.Fatalf("Error making YouTube API call: %v", err)
 		}
 		fmt.Printf("Thumbnail uploaded!\n")
+	}
+
+	// Insert caption
+	if captionReader != nil {
+		captionObj := &youtube.Caption{
+			Snippet: &youtube.CaptionSnippet{},
+		}
+		captionObj.Snippet.VideoId = video.Id
+		captionObj.Snippet.Language = *language
+		captionObj.Snippet.Name = *language
+		captionInsert := service.Captions.Insert("snippet", captionObj).Sync(true)
+		captionRes, err := captionInsert.Media(captionReader).Do()
+		if err != nil {
+			if captionRes != nil {
+				log.Fatalf("Error inserting caption: %v, %v", err, captionRes.HTTPStatusCode)
+			} else {
+				log.Fatalf("Error inserting caption: %v", err)
+			}
+		}
+		fmt.Printf("Caption uploaded!\n")
 	}
 
 	plx := &Playlistx{}

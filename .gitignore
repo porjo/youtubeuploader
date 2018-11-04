@@ -5,6 +5,7 @@
 *.mkv
 *.gz
 *.zip
+*.exe
 .*.swp
 vendor
 youtubeuploader
