@@ -68,9 +68,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	var reader io.ReadCloser
+	var filesize int64
+	var err error
+
 	var limitRange limitRange
 	if *limitBetween != "" {
-		var err error
 		limitRange, err = parseLimitBetween(*limitBetween)
 		if err != nil {
 			fmt.Printf("Invalid value for -limitBetween: %v", err)
@@ -78,18 +81,27 @@ func main() {
 		}
 	}
 
-	reader, filesize := Open(*filename)
+	reader, filesize, err = Open(*filename)
+	if err != nil {
+		log.Fatal(err)
+	}
 	defer reader.Close()
 
 	var thumbReader io.ReadCloser
 	if *thumbnail != "" {
-		thumbReader, _ = Open(*thumbnail)
+		thumbReader, _, err = Open(*thumbnail)
+		if err != nil {
+			log.Fatal(err)
+		}
 		defer thumbReader.Close()
 	}
 
 	var captionReader io.ReadCloser
 	if *caption != "" {
-		captionReader, _ = Open(*caption)
+		captionReader, _, err = Open(*caption)
+		if err != nil {
+			log.Fatal(err)
+		}
 		defer captionReader.Close()
 	}
 
