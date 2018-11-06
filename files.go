@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -121,42 +120,45 @@ errJump:
 	return
 }
 
-func Open(filename string) (reader io.ReadCloser, filesize int64) {
+func Open(filename string) (io.ReadCloser, int64, error) {
+	var reader io.ReadCloser
+	var filesize int64
+	var err error
 	if strings.HasPrefix(filename, "http") {
 		resp, err := http.Head(filename)
 		if err != nil {
-			log.Fatalf("Error opening %s: %s", filename, err)
+			return reader, filesize, fmt.Errorf("error opening %s: %s", filename, err)
 		}
 		lenStr := resp.Header.Get("content-length")
 		if lenStr != "" {
 			filesize, err = strconv.ParseInt(lenStr, 10, 64)
 			if err != nil {
-				log.Fatal(err)
+				return reader, filesize, err
 			}
 		}
 
 		resp, err = http.Get(filename)
 		if err != nil {
-			log.Fatalf("Error opening %s: %s", filename, err)
+			return reader, filesize, fmt.Errorf("error opening %s: %s", filename, err)
 		}
 		if resp.ContentLength != 0 {
 			filesize = resp.ContentLength
 		}
 		reader = resp.Body
-		return
+		return reader, filesize, nil
 	}
 
 	file, err := os.Open(filename)
 	if err != nil {
-		log.Fatalf("Error opening %s: %s", filename, err)
+		return reader, filesize, fmt.Errorf("error opening %s: %s", filename, err)
 	}
 
 	fileInfo, err := file.Stat()
 	if err != nil {
-		log.Fatalf("Error stat'ing file %s: %s", filename, err)
+		return reader, filesize, fmt.Errorf("error stat'ing %s: %s", filename, err)
 	}
 
-	return file, fileInfo.Size()
+	return file, fileInfo.Size(), nil
 }
 
 func (d *Date) UnmarshalJSON(b []byte) (err error) {
