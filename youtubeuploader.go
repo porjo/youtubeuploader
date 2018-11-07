@@ -22,6 +22,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 
 	"golang.org/x/oauth2"
@@ -35,7 +36,7 @@ var (
 	filename       = flag.String("filename", "", "Filename to upload. Can be a URL")
 	thumbnail      = flag.String("thumbnail", "", "Thumbnail to upload. Can be a URL")
 	caption        = flag.String("caption", "", "Caption to upload. Can be URL")
-	title          = flag.String("title", "Video Title", "Video title")
+	title          = flag.String("title", "", "Video title")
 	description    = flag.String("description", "uploaded by youtubeuploader", "Video description")
 	language       = flag.String("language", "en", "Video language")
 	categoryId     = flag.String("categoryId", "", "Video category Id")
@@ -54,6 +55,27 @@ var (
 	appVersion string = "unknown"
 )
 
+// Search video by title (exact text)
+func searchTitle(service *youtube.Service, text *string) {
+	call, err := service.Search.List("snippet").Type("video").Q(*text).Do()
+	if err != nil {
+		if call != nil {
+			log.Fatalf("Error searching video title  '%v': %v, %v", text, err, call.HTTPStatusCode)
+		} else {
+			log.Fatalf("Error searching video title '%v': %v", text, err)
+		}
+	}
+	var re = regexp.MustCompile("\\W")
+	var texta = strings.ToLower(re.ReplaceAllString(*text, ""))
+	for _, item := range call.Items {
+		var textb = strings.ToLower(re.ReplaceAllString(item.Snippet.Title, ""))
+		if texta == textb {
+			fmt.Printf("%v\n", item.Id.VideoId)
+		}
+	}
+}
+
+// Main.
 func main() {
 	flag.Parse()
 
@@ -62,7 +84,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	if *filename == "" {
+	if *filename == "" && *title == "" {
 		fmt.Printf("You must provide a filename of a video file to upload\n")
 		flag.PrintDefaults()
 		os.Exit(1)
@@ -81,11 +103,13 @@ func main() {
 		}
 	}
 
-	reader, filesize, err = Open(*filename)
-	if err != nil {
-		log.Fatal(err)
+	if *filename != "" {
+		reader, filesize, err = Open(*filename)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer reader.Close()
 	}
-	defer reader.Close()
 
 	var thumbReader io.ReadCloser
 	if *thumbnail != "" {
@@ -134,6 +158,15 @@ func main() {
 	service, err := youtube.New(client)
 	if err != nil {
 		log.Fatalf("Error creating Youtube client: %s", err)
+	}
+
+	// Search video by title
+	if *filename == "" && *title != "" {
+		searchTitle(service, title)
+		os.Exit(0)
+	}
+	if *title == "" {
+		*title = "Video title"
 	}
 
 	if upload.Status.PrivacyStatus == "" {
