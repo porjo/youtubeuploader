@@ -9,8 +9,6 @@ Scripted uploads to youtube.
 
 Grab a [precompiled binary](https://github.com/porjo/youtubeuploader/releases)^ for Linux, Mac or Windows or build it yourself.
 
-_^ The binaries are compressed so you need to unpack them and give them executable permissions (e.g. chmod +x)_
-
 ## Build
 
 This project uses ['dep'](https://github.com/golang/dep) for [vendoring](https://blog.gopheracademy.com/advent-2015/vendor-folder/).
