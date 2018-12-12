@@ -153,13 +153,17 @@ func startWebServer() (callbackCh chan CallbackStatus, err error) {
 	}
 	callbackCh = make(chan CallbackStatus)
 	go http.Serve(listener, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		cbs := CallbackStatus{}
-		cbs.state = r.FormValue("state")
-		cbs.code = r.FormValue("code")
-		callbackCh <- cbs // send code to OAuth flow
-		listener.Close()
-		w.Header().Set("Content-Type", "text/plain")
-		fmt.Fprintf(w, "Received code: %v\r\nYou can now safely close this browser window.", cbs.code)
+		code := r.FormValue("code")
+		state := r.FormValue("state")
+		if code != "" && state != "" {
+			cbs := CallbackStatus{}
+			cbs.state = r.FormValue("state")
+			cbs.code = r.FormValue("code")
+			callbackCh <- cbs // send code to OAuth flow
+			listener.Close()
+			w.Header().Set("Content-Type", "text/plain")
+			fmt.Fprintf(w, "Received code: %v\r\nYou can now safely close this browser window.", cbs.code)
+		}
 	}))
 
 	return callbackCh, nil
