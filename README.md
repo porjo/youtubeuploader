@@ -124,7 +124,7 @@ Video title, description etc can specified via the command line flags or via a J
   "locationDescription":  "Eiffel Tower",
   "playlistIds":  ["xxxxxxxxxxxxxxxxxx", "yyyyyyyyyyyyyyyyyy"],
   "playlistTitles":  ["my test playlist"],
-  "language":  "fr"
+  "language":  "fr",
   "monetization": {
      "allowed": true,
      "excluded_regions": ["CH","AF"]
