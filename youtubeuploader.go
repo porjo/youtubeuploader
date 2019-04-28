@@ -32,23 +32,24 @@ import (
 type chanChan chan chan struct{}
 
 var (
-	filename       = flag.String("filename", "", "Filename to upload. Can be a URL")
-	thumbnail      = flag.String("thumbnail", "", "Thumbnail to upload. Can be a URL")
-	caption        = flag.String("caption", "", "Caption to upload. Can be URL")
-	title          = flag.String("title", "Video Title", "Video title")
-	description    = flag.String("description", "uploaded by youtubeuploader", "Video description")
-	language       = flag.String("language", "en", "Video language")
-	categoryId     = flag.String("categoryId", "", "Video category Id")
-	tags           = flag.String("tags", "", "Comma separated list of video tags")
-	privacy        = flag.String("privacy", "private", "Video privacy status")
-	quiet          = flag.Bool("quiet", false, "Suppress progress indicator")
-	rate           = flag.Int("ratelimit", 0, "Rate limit upload in kbps. No limit by default")
-	metaJSON       = flag.String("metaJSON", "", "JSON file containing title,description,tags etc (optional)")
-	limitBetween   = flag.String("limitBetween", "", "Only rate limit between these times e.g. 10:00-14:00 (local time zone)")
-	headlessAuth   = flag.Bool("headlessAuth", false, "set this if no browser available for the oauth authorisation step")
-	oAuthPort      = flag.Int("oAuthPort", 8080, "TCP port to listen on when requesting an oAuth token")
-	showAppVersion = flag.Bool("v", false, "show version")
-	chunksize      = flag.Int("chunksize", googleapi.DefaultUploadChunkSize, "size (in bytes) of each upload chunk. A zero value will cause all data to be uploaded in a single request")
+	filename          = flag.String("filename", "", "Filename to upload. Can be a URL")
+	thumbnail         = flag.String("thumbnail", "", "Thumbnail to upload. Can be a URL")
+	caption           = flag.String("caption", "", "Caption to upload. Can be URL")
+	title             = flag.String("title", "Video Title", "Video title")
+	description       = flag.String("description", "uploaded by youtubeuploader", "Video description")
+	language          = flag.String("language", "en", "Video language")
+	categoryId        = flag.String("categoryId", "", "Video category Id")
+	tags              = flag.String("tags", "", "Comma separated list of video tags")
+	privacy           = flag.String("privacy", "private", "Video privacy status")
+	quiet             = flag.Bool("quiet", false, "Suppress progress indicator")
+	rate              = flag.Int("ratelimit", 0, "Rate limit upload in kbps. No limit by default")
+	metaJSON          = flag.String("metaJSON", "", "JSON file containing title,description,tags etc (optional)")
+	limitBetween      = flag.String("limitBetween", "", "Only rate limit between these times e.g. 10:00-14:00 (local time zone)")
+	headlessAuth      = flag.Bool("headlessAuth", false, "set this if no browser available for the oauth authorisation step")
+	oAuthPort         = flag.Int("oAuthPort", 8080, "TCP port to listen on when requesting an oAuth token")
+	showAppVersion    = flag.Bool("v", false, "show version")
+	chunksize         = flag.Int("chunksize", googleapi.DefaultUploadChunkSize, "size (in bytes) of each upload chunk. A zero value will cause all data to be uploaded in a single request")
+	notifySubscribers = flag.Bool("notify", true, "notify channel subscribers of new video")
 
 	// this is set by compile-time to match git tag
 	appVersion string = "unknown"
@@ -166,7 +167,7 @@ func main() {
 	option = googleapi.ChunkSize(*chunksize)
 
 	call := service.Videos.Insert("snippet,status,recordingDetails", upload)
-	video, err = call.Media(reader, option).Do()
+	video, err = call.NotifySubscribers(*notifySubscribers).Media(reader, option).Do()
 
 	if quitChan != nil {
 		quit := make(chan struct{})
