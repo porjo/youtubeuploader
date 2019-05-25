@@ -92,18 +92,43 @@ func (t *limitTransport) RoundTrip(r *http.Request) (res *http.Response, err err
 	return t.rt.RoundTrip(r)
 }
 
-func (plx *Playlistx) AddVideoToPlaylist(service *youtube.Service, videoID string) (err error) {
-	listCall := service.Playlists.List("snippet,contentDetails")
-	listCall = listCall.Mine(true)
-	response, err := listCall.Do()
-	if err != nil {
-		return fmt.Errorf("error retrieving playlists: %s", err)
+func playlistList(service *youtube.Service, pageToken string) (response *youtube.PlaylistListResponse, err error) {
+	call := service.Playlists.List("snippet,contentDetails")
+	call = call.Mine(true)
+
+	if pageToken != "" {
+		call = call.PageToken(pageToken)
 	}
 
+	response, err = call.Do()
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving playlists: %s", err)
+	}
+
+	return response, nil
+}
+
+func (plx *Playlistx) AddVideoToPlaylist(service *youtube.Service, videoID string) (err error) {
 	var playlist *youtube.Playlist
-	for _, pl := range response.Items {
-		if pl.Id == plx.Id || pl.Snippet.Title == plx.Title {
-			playlist = pl
+
+	nextPageToken := ""
+	for {
+		// retrieve the next set of playlists
+		playlistResponse, err := playlistList(service, nextPageToken)
+		if err != nil {
+			return err
+		}
+
+		for _, pl := range playlistResponse.Items {
+			if pl.Id == plx.Id || pl.Snippet.Title == plx.Title {
+				playlist = pl
+				break
+			}
+		}
+
+		// retrieve the next page of results or exit the loop if done
+		nextPageToken = playlistResponse.NextPageToken
+		if nextPageToken == "" {
 			break
 		}
 	}
