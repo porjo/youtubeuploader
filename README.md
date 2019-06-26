@@ -9,16 +9,6 @@ Scripted uploads to youtube.
 
 Grab a [precompiled binary](https://github.com/porjo/youtubeuploader/releases) for Linux, Mac or Windows or build it yourself.
 
-## Build
-
-This project uses ['dep'](https://github.com/golang/dep) for [vendoring](https://blog.gopheracademy.com/advent-2015/vendor-folder/).
-
-- Install Go e.g. `yum install golang` or `apt-get install golang`
-- Define your Go Path e.g. `export GOPATH=$HOME/go`
-- Fetch the project `go get github.com/porjo/youtubeuploader`
-- run `dep ensure` in the project root
-- run `go build`
-
 ## Setup
 
 ### Youtube API
@@ -60,10 +50,11 @@ If it is the first time you've run the utility, a browser window should popup an
 
 Full list of options:
 ```
+You must provide a filename of a video file to upload
   -cache string
     	Token cache file (default "request.token")
   -caption string
-      Caption to upload. Can be a URL
+    	Caption to upload. Can be a URL
   -categoryId string
     	Video category Id
   -chunksize int
@@ -75,11 +66,13 @@ Full list of options:
   -headlessAuth
     	set this if no browser available for the oauth authorisation step
   -language string
-      Video language (default "en")
+    	Video language (default "en")
   -limitBetween string
     	Only rate limit between these times e.g. 10:00-14:00 (local time zone)
   -metaJSON string
     	JSON file containing title,description,tags etc (optional)
+  -notify
+    	notify channel subscribers of new video (default true)
   -oAuthPort int
     	TCP port to listen on when requesting an oAuth token (default 8080)
   -privacy string
