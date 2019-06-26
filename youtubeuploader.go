@@ -34,7 +34,7 @@ type chanChan chan chan struct{}
 var (
 	filename          = flag.String("filename", "", "Filename to upload. Can be a URL")
 	thumbnail         = flag.String("thumbnail", "", "Thumbnail to upload. Can be a URL")
-	caption           = flag.String("caption", "", "Caption to upload. Can be URL")
+	caption           = flag.String("caption", "", "Caption to upload. Can be a URL")
 	title             = flag.String("title", "Video Title", "Video title")
 	description       = flag.String("description", "uploaded by youtubeuploader", "Video description")
 	language          = flag.String("language", "en", "Video language")
