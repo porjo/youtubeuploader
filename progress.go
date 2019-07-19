@@ -33,7 +33,7 @@ func Progress(quitChan chanChan, transport *limitTransport, filesize int64) {
 				if curRate >= 125000 {
 					status = fmt.Sprintf("Progress: %8.2f Mbps, %d / %d (%s) ETA %8s", curRate/125000, s.Bytes, filesize, s.Progress, s.TimeRem)
 				} else {
-					status = fmt.Sprintf("Progress: %8.2f kbps, %d / %d (%s) ETA %8s", curRate/125, s.Bytes, filesize, s.Progress, s.TimeRem)
+					status = fmt.Sprintf("Progress: %8.2f Kbps, %d / %d (%s) ETA %8s", curRate/125, s.Bytes, filesize, s.Progress, s.TimeRem)
 				}
 				fmt.Printf("\r%s\r%s", strings.Repeat(" ", erase), status)
 				erase = len(status)
