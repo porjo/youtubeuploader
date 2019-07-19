@@ -42,7 +42,7 @@ var (
 	tags              = flag.String("tags", "", "Comma separated list of video tags")
 	privacy           = flag.String("privacy", "private", "Video privacy status")
 	quiet             = flag.Bool("quiet", false, "Suppress progress indicator")
-	rate              = flag.Int("ratelimit", 0, "Rate limit upload in kbps. No limit by default")
+	rate              = flag.Int("ratelimit", 0, "Rate limit upload in Kbps. No limit by default")
 	metaJSON          = flag.String("metaJSON", "", "JSON file containing title,description,tags etc (optional)")
 	limitBetween      = flag.String("limitBetween", "", "Only rate limit between these times e.g. 10:00-14:00 (local time zone)")
 	headlessAuth      = flag.Bool("headlessAuth", false, "set this if no browser available for the oauth authorisation step")
@@ -159,7 +159,11 @@ func main() {
 		upload.Snippet.DefaultAudioLanguage = *language
 	}
 
-	fmt.Printf("Uploading file '%s'...\n", *filename)
+	if *filename == "-" {
+		fmt.Printf("Uploading file from pipe\n")
+	} else {
+		fmt.Printf("Uploading file '%s'\n", *filename)
+	}
 
 	var option googleapi.MediaOption
 	var video *youtube.Video

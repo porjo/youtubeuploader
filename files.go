@@ -125,9 +125,10 @@ func Open(filename string) (io.ReadCloser, int64, error) {
 	var filesize int64
 	var err error
 	if strings.HasPrefix(filename, "http") {
-		resp, err := http.Head(filename)
+		var resp *http.Response
+		resp, err = http.Head(filename)
 		if err != nil {
-			return reader, filesize, fmt.Errorf("error opening %s: %s", filename, err)
+			return reader, 0, fmt.Errorf("error opening %s: %s", filename, err)
 		}
 		lenStr := resp.Header.Get("content-length")
 		if lenStr != "" {
@@ -139,26 +140,31 @@ func Open(filename string) (io.ReadCloser, int64, error) {
 
 		resp, err = http.Get(filename)
 		if err != nil {
-			return reader, filesize, fmt.Errorf("error opening %s: %s", filename, err)
+			return reader, 0, fmt.Errorf("error opening %s: %s", filename, err)
 		}
 		if resp.ContentLength != 0 {
 			filesize = resp.ContentLength
 		}
 		reader = resp.Body
-		return reader, filesize, nil
-	}
+	} else if filename == "-" {
+		reader = os.Stdin
+	} else {
+		var file *os.File
+		var fileInfo os.FileInfo
+		file, err = os.Open(filename)
+		if err != nil {
+			return reader, 0, fmt.Errorf("error opening %s: %s", filename, err)
+		}
 
-	file, err := os.Open(filename)
-	if err != nil {
-		return reader, filesize, fmt.Errorf("error opening %s: %s", filename, err)
-	}
+		fileInfo, err = file.Stat()
+		if err != nil {
+			return reader, 0, fmt.Errorf("error stat'ing %s: %s", filename, err)
+		}
 
-	fileInfo, err := file.Stat()
-	if err != nil {
-		return reader, filesize, fmt.Errorf("error stat'ing %s: %s", filename, err)
+		reader = file
+		filesize = fileInfo.Size()
 	}
-
-	return file, fileInfo.Size(), nil
+	return reader, filesize, err
 }
 
 func (d *Date) UnmarshalJSON(b []byte) (err error) {
