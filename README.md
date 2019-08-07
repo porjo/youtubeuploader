@@ -50,7 +50,6 @@ If it is the first time you've run the utility, a browser window should popup an
 
 Full list of options:
 ```
-You must provide a filename of a video file to upload
   -cache string
     	Token cache file (default "request.token")
   -caption string
@@ -80,7 +79,7 @@ You must provide a filename of a video file to upload
   -quiet
     	Suppress progress indicator
   -ratelimit int
-    	Rate limit upload in kbps. No limit by default
+    	Rate limit upload in Kbps. No limit by default
   -secrets string
     	Client Secrets configuration (default "client_secrets.json")
   -tags string
