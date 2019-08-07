@@ -22,7 +22,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strings"
 
 	"golang.org/x/oauth2"
 	"google.golang.org/api/googleapi"
@@ -135,28 +134,6 @@ func main() {
 	service, err := youtube.New(client)
 	if err != nil {
 		log.Fatalf("Error creating Youtube client: %s", err)
-	}
-
-	if upload.Status.PrivacyStatus == "" {
-		upload.Status.PrivacyStatus = *privacy
-	}
-	if upload.Snippet.Tags == nil && strings.Trim(*tags, "") != "" {
-		upload.Snippet.Tags = strings.Split(*tags, ",")
-	}
-	if upload.Snippet.Title == "" {
-		upload.Snippet.Title = *title
-	}
-	if upload.Snippet.Description == "" {
-		upload.Snippet.Description = *description
-	}
-	if upload.Snippet.CategoryId == "" && *categoryId != "" {
-		upload.Snippet.CategoryId = *categoryId
-	}
-	if upload.Snippet.DefaultLanguage == "" && *language != "" {
-		upload.Snippet.DefaultLanguage = *language
-	}
-	if upload.Snippet.DefaultAudioLanguage == "" && *language != "" {
-		upload.Snippet.DefaultAudioLanguage = *language
 	}
 
 	if *filename == "-" {

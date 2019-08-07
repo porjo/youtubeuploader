@@ -116,6 +116,12 @@ errJump:
 	if video.Snippet.CategoryId == "" && *categoryId != "" {
 		video.Snippet.CategoryId = *categoryId
 	}
+	if video.Snippet.DefaultLanguage == "" && *language != "" {
+		video.Snippet.DefaultLanguage = *language
+	}
+	if video.Snippet.DefaultAudioLanguage == "" && *language != "" {
+		video.Snippet.DefaultAudioLanguage = *language
+	}
 
 	return
 }
