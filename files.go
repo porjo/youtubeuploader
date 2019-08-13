@@ -111,7 +111,13 @@ errJump:
 		video.Snippet.Title = *title
 	}
 	if video.Snippet.Description == "" {
-		video.Snippet.Description = *description
+		// expand newlines
+		descriptionExpanded, err := strconv.Unquote(`"` + *description + `"`)
+		if err != nil {
+			video.Snippet.Description = *description
+		} else {
+			video.Snippet.Description = descriptionExpanded
+		}
 	}
 	if video.Snippet.CategoryId == "" && *categoryId != "" {
 		video.Snippet.CategoryId = *categoryId
