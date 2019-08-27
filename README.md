@@ -61,7 +61,7 @@ Full list of options:
   -description string
     	Video description (default "uploaded by youtubeuploader")
   -filename string
-    	Filename to upload. Can be a URL
+    	Filename to upload. Can be a URL. Read from stdin with '-'
   -headlessAuth
     	set this if no browser available for the oauth authorisation step
   -language string
