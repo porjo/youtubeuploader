@@ -131,6 +131,14 @@ func readConfig(scopes []string) (*oauth2.Config, error) {
 		return nil, errors.New("Client secrets file format not recognised")
 	}
 
+	redirURL := ""
+	if len(cfg2.RedirectURIs) > 0 {
+		redirURL = cfg2.RedirectURIs[0]
+	} else {
+		fmt.Printf("Redirect URL could not be found. Using default: http://localhost:8080")
+		redirURL = "http://localhost:8080"
+	}
+
 	oCfg = &oauth2.Config{
 		ClientID:     cfg2.ClientID,
 		ClientSecret: cfg2.ClientSecret,
@@ -139,7 +147,7 @@ func readConfig(scopes []string) (*oauth2.Config, error) {
 			AuthURL:  cfg2.AuthURI,
 			TokenURL: cfg2.TokenURI,
 		},
-		RedirectURL: cfg2.RedirectURIs[0],
+		RedirectURL: redirURL,
 	}
 	return oCfg, nil
 }
