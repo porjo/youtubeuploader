@@ -66,7 +66,7 @@ type VideoMeta struct {
 	Language string `json:"language,omitempty"`
 }
 
-func (t *limitTransport) RoundTrip(r *http.Request) (res *http.Response, err error) {
+func (t *limitTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 	// Content-Type starts with 'multipart/related' where chunksize >= filesize (including chunksize 0)
 	// and 'video' for other chunksizes
 	if strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/related") ||
@@ -92,7 +92,7 @@ func (t *limitTransport) RoundTrip(r *http.Request) (res *http.Response, err err
 	return t.rt.RoundTrip(r)
 }
 
-func playlistList(service *youtube.Service, pageToken string) (response *youtube.PlaylistListResponse, err error) {
+func playlistList(service *youtube.Service, pageToken string) (*youtube.PlaylistListResponse, error) {
 	call := service.Playlists.List("snippet,contentDetails")
 	call = call.Mine(true)
 
@@ -100,7 +100,7 @@ func playlistList(service *youtube.Service, pageToken string) (response *youtube
 		call = call.PageToken(pageToken)
 	}
 
-	response, err = call.Do()
+	response, err := call.Do()
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving playlists: %s", err)
 	}
@@ -108,8 +108,9 @@ func playlistList(service *youtube.Service, pageToken string) (response *youtube
 	return response, nil
 }
 
-func (plx *Playlistx) AddVideoToPlaylist(service *youtube.Service, videoID string) (err error) {
+func (plx *Playlistx) AddVideoToPlaylist(service *youtube.Service, videoID string) error {
 	var playlist *youtube.Playlist
+	var err error
 
 	nextPageToken := ""
 	for {

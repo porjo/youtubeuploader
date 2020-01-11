@@ -36,21 +36,20 @@ type Date struct {
 	time.Time
 }
 
-func LoadVideoMeta(filename string, video *youtube.Video) (videoMeta VideoMeta) {
+func LoadVideoMeta(filename string, video *youtube.Video) (*VideoMeta, error) {
+	videoMeta := &VideoMeta{}
 	// attempt to load from meta JSON, otherwise use values specified from command line flags
 	if filename != "" {
 		file, e := ioutil.ReadFile(filename)
 		if e != nil {
-			fmt.Printf("Error reading file '%s': %s\n", filename, e)
-			fmt.Println("Will use command line flags instead")
-			goto errJump
+			e2 := fmt.Errorf("Error reading file '%s': %s\n", filename, e)
+			return nil, e2
 		}
 
 		e = json.Unmarshal(file, &videoMeta)
 		if e != nil {
-			fmt.Printf("Error parsing file '%s': %s\n", filename, e)
-			fmt.Println("Will use command line flags instead")
-			goto errJump
+			e2 := fmt.Errorf("Error parsing file '%s': %s\n", filename, e)
+			return nil, e2
 		}
 
 		video.Status = &youtube.VideoStatus{}
@@ -99,7 +98,6 @@ func LoadVideoMeta(filename string, video *youtube.Video) (videoMeta VideoMeta) 
 			video.Snippet.DefaultAudioLanguage = videoMeta.Language
 		}
 	}
-errJump:
 
 	if video.Status.PrivacyStatus == "" {
 		video.Status.PrivacyStatus = *privacy
@@ -129,7 +127,7 @@ errJump:
 		video.Snippet.DefaultAudioLanguage = *language
 	}
 
-	return
+	return videoMeta, nil
 }
 
 func Open(filename string) (io.ReadCloser, int64, error) {
