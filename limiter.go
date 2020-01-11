@@ -32,7 +32,7 @@ type limitChecker struct {
 	reader *flowrate.Reader
 }
 
-func (lc *limitChecker) Read(p []byte) (n int, err error) {
+func (lc *limitChecker) Read(p []byte) (int, error) {
 	if lc.start.IsZero() || lc.end.IsZero() {
 		lc.reader.SetLimit(int64(*rate * 125))
 		return lc.reader.Read(p)

@@ -129,7 +129,10 @@ func main() {
 		Status:           &youtube.VideoStatus{},
 	}
 
-	videoMeta := LoadVideoMeta(*metaJSON, upload)
+	videoMeta, err := LoadVideoMeta(*metaJSON, upload)
+	if err != nil {
+		log.Fatalf("Error loading video meta data: %s", err)
+	}
 
 	service, err := youtube.New(client)
 	if err != nil {
