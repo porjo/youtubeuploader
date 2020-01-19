@@ -16,9 +16,11 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -43,6 +45,7 @@ var (
 	quiet             = flag.Bool("quiet", false, "Suppress progress indicator")
 	rate              = flag.Int("ratelimit", 0, "Rate limit upload in Kbps. No limit by default")
 	metaJSON          = flag.String("metaJSON", "", "JSON file containing title,description,tags etc (optional)")
+	metaJSONout       = flag.String("metaJSONout", "", "filename to write uploaded video metadata into (optional)")
 	limitBetween      = flag.String("limitBetween", "", "Only rate limit between these times e.g. 10:00-14:00 (local time zone)")
 	headlessAuth      = flag.Bool("headlessAuth", false, "set this if no browser available for the oauth authorisation step")
 	oAuthPort         = flag.Int("oAuthPort", 8080, "TCP port to listen on when requesting an oAuth token")
@@ -167,6 +170,15 @@ func main() {
 		}
 	}
 	fmt.Printf("Upload successful! Video ID: %v\n", video.Id)
+
+	if *metaJSONout != "" {
+		videoMeta, _ := json.Marshal(video)
+		err = ioutil.WriteFile(*metaJSONout, videoMeta, 0644)
+		if err != nil {
+			log.Fatalf("Error writing to video metadata file '%s': %s\n", *metaJSONout, err)
+		}
+		fmt.Printf("Wrote video metadata to file '%s'\n", *metaJSONout)
+	}
 
 	if thumbReader != nil {
 		log.Printf("Uploading thumbnail '%s'...\n", *thumbnail)

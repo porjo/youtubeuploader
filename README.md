@@ -50,7 +50,7 @@ If it is the first time you've run the utility, a browser window should popup an
 
 Full list of options:
 ```
-  -cache string
+ -cache string
     	Token cache file (default "request.token")
   -caption string
     	Caption to upload. Can be a URL
@@ -70,6 +70,8 @@ Full list of options:
     	Only rate limit between these times e.g. 10:00-14:00 (local time zone)
   -metaJSON string
     	JSON file containing title,description,tags etc (optional)
+  -metaJSONout string
+    	filename to write uploaded video metadata into (optional)
   -notify
     	notify channel subscribers of new video (default true)
   -oAuthPort int
