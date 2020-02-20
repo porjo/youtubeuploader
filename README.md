@@ -59,7 +59,7 @@ Full list of options:
   -chunksize int
     	size (in bytes) of each upload chunk. A zero value will cause all data to be uploaded in a single request (default 16777216)
   -description string
-    	Video description (default "uploaded by youtubeuploader")
+    	video description (default "uploaded by youtubeuploader")
   -filename string
     	video filename. Can be a URL. Read from stdin with '-'
   -headlessAuth
@@ -77,7 +77,7 @@ Full list of options:
   -oAuthPort int
     	TCP port to listen on when requesting an oAuth token (default 8080)
   -privacy string
-    	Video privacy status (default "private")
+    	video privacy status (default "private")
   -quiet
     	suppress progress indicator
   -ratelimit int
@@ -89,7 +89,7 @@ Full list of options:
   -thumbnail string
     	thumbnail filename. Can be a URL
   -title string
-    	Video title (default "video title")
+    	video title (default "video title")
   -version
     	show version
 ```
