@@ -33,23 +33,23 @@ import (
 type chanChan chan chan struct{}
 
 var (
-	filename          = flag.String("filename", "", "Filename to upload. Can be a URL. Read from stdin with '-'")
-	thumbnail         = flag.String("thumbnail", "", "Thumbnail to upload. Can be a URL")
-	caption           = flag.String("caption", "", "Caption to upload. Can be a URL")
-	title             = flag.String("title", "Video Title", "Video title")
+	filename          = flag.String("filename", "", "video filename. Can be a URL. Read from stdin with '-'")
+	thumbnail         = flag.String("thumbnail", "", "thumbnail filename. Can be a URL")
+	caption           = flag.String("caption", "", "caption filename. Can be a URL")
+	title             = flag.String("title", "video title", "Video title")
 	description       = flag.String("description", "uploaded by youtubeuploader", "Video description")
-	language          = flag.String("language", "en", "Video language")
-	categoryId        = flag.String("categoryId", "", "Video category Id")
-	tags              = flag.String("tags", "", "Comma separated list of video tags")
+	language          = flag.String("language", "en", "video language")
+	categoryId        = flag.String("categoryId", "", "video category Id")
+	tags              = flag.String("tags", "", "comma separated list of video tags")
 	privacy           = flag.String("privacy", "private", "Video privacy status")
-	quiet             = flag.Bool("quiet", false, "Suppress progress indicator")
-	rate              = flag.Int("ratelimit", 0, "Rate limit upload in Kbps. No limit by default")
+	quiet             = flag.Bool("quiet", false, "suppress progress indicator")
+	rate              = flag.Int("ratelimit", 0, "rate limit upload in Kbps. No limit by default")
 	metaJSON          = flag.String("metaJSON", "", "JSON file containing title,description,tags etc (optional)")
 	metaJSONout       = flag.String("metaJSONout", "", "filename to write uploaded video metadata into (optional)")
-	limitBetween      = flag.String("limitBetween", "", "Only rate limit between these times e.g. 10:00-14:00 (local time zone)")
+	limitBetween      = flag.String("limitBetween", "", "only rate limit between these times e.g. 10:00-14:00 (local time zone)")
 	headlessAuth      = flag.Bool("headlessAuth", false, "set this if no browser available for the oauth authorisation step")
 	oAuthPort         = flag.Int("oAuthPort", 8080, "TCP port to listen on when requesting an oAuth token")
-	showAppVersion    = flag.Bool("v", false, "show version")
+	showAppVersion    = flag.Bool("version", false, "show version")
 	chunksize         = flag.Int("chunksize", googleapi.DefaultUploadChunkSize, "size (in bytes) of each upload chunk. A zero value will cause all data to be uploaded in a single request")
 	notifySubscribers = flag.Bool("notify", true, "notify channel subscribers of new video")
 
@@ -66,7 +66,8 @@ func main() {
 	}
 
 	if *filename == "" {
-		fmt.Printf("You must provide a filename of a video file to upload\n")
+		fmt.Printf("\nYou must provide a filename of a video file to upload\n")
+		fmt.Printf("\nUsage:\n")
 		flag.PrintDefaults()
 		os.Exit(1)
 	}
