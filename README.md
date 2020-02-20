@@ -50,24 +50,24 @@ If it is the first time you've run the utility, a browser window should popup an
 
 Full list of options:
 ```
- -cache string
-    	Token cache file (default "request.token")
+  -cache string
+    	token cache file (default "request.token")
   -caption string
-    	Caption to upload. Can be a URL
+    	caption filename. Can be a URL
   -categoryId string
-    	Video category Id
+    	video category Id
   -chunksize int
-    	size (in bytes) of each upload chunk. A zero value will cause all data to be uploaded in a single request (default 8388608)
+    	size (in bytes) of each upload chunk. A zero value will cause all data to be uploaded in a single request (default 16777216)
   -description string
     	Video description (default "uploaded by youtubeuploader")
   -filename string
-    	Filename to upload. Can be a URL. Read from stdin with '-'
+    	video filename. Can be a URL. Read from stdin with '-'
   -headlessAuth
     	set this if no browser available for the oauth authorisation step
   -language string
-    	Video language (default "en")
+    	video language (default "en")
   -limitBetween string
-    	Only rate limit between these times e.g. 10:00-14:00 (local time zone)
+    	only rate limit between these times e.g. 10:00-14:00 (local time zone)
   -metaJSON string
     	JSON file containing title,description,tags etc (optional)
   -metaJSONout string
@@ -79,18 +79,19 @@ Full list of options:
   -privacy string
     	Video privacy status (default "private")
   -quiet
-    	Suppress progress indicator
+    	suppress progress indicator
   -ratelimit int
-    	Rate limit upload in Kbps. No limit by default
+    	rate limit upload in Kbps. No limit by default
   -secrets string
     	Client Secrets configuration (default "client_secrets.json")
   -tags string
-    	Comma separated list of video tags
+    	comma separated list of video tags
   -thumbnail string
-    	Thumbnail to upload. Can be a URL
+    	thumbnail filename. Can be a URL
   -title string
-    	Video title (default "Video Title")
-  -v	show version
+    	Video title (default "video title")
+  -version
+    	show version
 ```
 *NOTE:* When specifying a URL as the filename, the data will be streamed through the localhost (download from remote host, then upload to Youtube)
 

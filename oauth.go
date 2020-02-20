@@ -50,7 +50,7 @@ https://developers.google.com/api-client-library/python/guide/aaa_client_secrets
 
 var (
 	clientSecretsFile = flag.String("secrets", "client_secrets.json", "Client Secrets configuration")
-	cache             = flag.String("cache", "request.token", "Token cache file")
+	cache             = flag.String("cache", "request.token", "token cache file")
 )
 
 // CallbackStatus is returned from the oauth2 callback
