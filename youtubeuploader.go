@@ -24,7 +24,9 @@ import (
 	"log"
 	"net/http"
 	"os"
-
+	"path/filepath"
+	"strings"
+	
 	"golang.org/x/oauth2"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/youtube/v3"
@@ -36,7 +38,7 @@ var (
 	filename          = flag.String("filename", "", "video filename. Can be a URL. Read from stdin with '-'")
 	thumbnail         = flag.String("thumbnail", "", "thumbnail filename. Can be a URL")
 	caption           = flag.String("caption", "", "caption filename. Can be a URL")
-	title             = flag.String("title", "video title", "video title")
+	title             = flag.String("title", "", "video title")
 	description       = flag.String("description", "uploaded by youtubeuploader", "video description")
 	language          = flag.String("language", "en", "video language")
 	categoryId        = flag.String("categoryId", "", "video category Id")
@@ -70,6 +72,10 @@ func main() {
 		fmt.Printf("\nUsage:\n")
 		flag.PrintDefaults()
 		os.Exit(1)
+	}
+	
+	if *title == "" {
+		*title = strings.Replace(filepath.Base(*filename),filepath.Ext(*filename),"",-1)
 	}
 
 	var reader io.ReadCloser
