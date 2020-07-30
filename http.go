@@ -93,7 +93,7 @@ func (t *limitTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 }
 
 func playlistList(service *youtube.Service, pageToken string) (*youtube.PlaylistListResponse, error) {
-	call := service.Playlists.List("snippet,contentDetails")
+	call := service.Playlists.List([]string{"snippet", "contentDetails"})
 	call = call.Mine(true)
 
 	if pageToken != "" {
@@ -142,7 +142,7 @@ func (plx *Playlistx) AddVideoToPlaylist(service *youtube.Service, videoID strin
 		playlist = &youtube.Playlist{}
 		playlist.Snippet = &youtube.PlaylistSnippet{Title: plx.Title}
 		playlist.Status = &youtube.PlaylistStatus{PrivacyStatus: plx.PrivacyStatus}
-		insertCall := service.Playlists.Insert("snippet,status", playlist)
+		insertCall := service.Playlists.Insert([]string{"snippet", "status"}, playlist)
 		// API doesn't return playlist ID here!?
 		playlist, err = insertCall.Do()
 		if err != nil {
@@ -157,7 +157,7 @@ func (plx *Playlistx) AddVideoToPlaylist(service *youtube.Service, videoID strin
 		Kind:    "youtube#video",
 	}
 
-	insertCall := service.PlaylistItems.Insert("snippet", playlistItem)
+	insertCall := service.PlaylistItems.Insert([]string{"snippet"}, playlistItem)
 	_, err = insertCall.Do()
 	if err != nil {
 		return err
