@@ -89,7 +89,7 @@ Full list of options:
   -thumbnail string
     	thumbnail filename. Can be a URL
   -title string
-    	video title (default "video title")
+    	video title
   -version
     	show version
 ```

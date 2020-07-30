@@ -26,7 +26,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	
+
 	"golang.org/x/oauth2"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/youtube/v3"
@@ -73,9 +73,9 @@ func main() {
 		flag.PrintDefaults()
 		os.Exit(1)
 	}
-	
+
 	if *title == "" {
-		*title = strings.Replace(filepath.Base(*filename),filepath.Ext(*filename),"",-1)
+		*title = strings.ReplaceAll(filepath.Base(*filename), filepath.Ext(*filename), "")
 	}
 
 	var reader io.ReadCloser
