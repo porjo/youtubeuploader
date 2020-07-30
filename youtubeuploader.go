@@ -160,7 +160,7 @@ func main() {
 
 	option = googleapi.ChunkSize(*chunksize)
 
-	call := service.Videos.Insert("snippet,status,recordingDetails", upload)
+	call := service.Videos.Insert([]string{"snippet", "status", "recordingDetails"}, upload)
 	video, err = call.NotifySubscribers(*notifySubscribers).Media(reader, option).Do()
 
 	if quitChan != nil {
@@ -204,7 +204,7 @@ func main() {
 		captionObj.Snippet.VideoId = video.Id
 		captionObj.Snippet.Language = *language
 		captionObj.Snippet.Name = *language
-		captionInsert := service.Captions.Insert("snippet", captionObj).Sync(true)
+		captionInsert := service.Captions.Insert([]string{"snippet"}, captionObj).Sync(true)
 		captionRes, err := captionInsert.Media(captionReader).Do()
 		if err != nil {
 			if captionRes != nil {
