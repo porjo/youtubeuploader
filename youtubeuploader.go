@@ -78,6 +78,8 @@ func main() {
 		*title = strings.ReplaceAll(filepath.Base(*filename), filepath.Ext(*filename), "")
 	}
 
+        *title = strings.ReplaceAll(*title, "_", " ")
+
 	var reader io.ReadCloser
 	var filesize int64
 	var err error
