@@ -18,13 +18,13 @@ Talking to the Youtube API requires oauth2 authentication. As such, you must:
 1. Create an account on the [Google Developers Console](https://console.developers.google.com)
 1. Register a new app there
 1. Enable the Youtube API (APIs & Auth -> APIs)
-1. Create Client ID (APIs & Auth -> Credentials), select 'Web application'
+1. Create Client ID (APIs & Auth -> Credentials -> OAuth 2.0-Client-IDs), select 'Web application'
 1. Add an 'Authorized redirect URI' of 'http://localhost:8080/oauth2callback'
 1. Take note of the `Client ID` and `Client secret` values
 
 The utility looks for `client_secrets.json` in the local directory. Create it first using the details from above:
 
-```
+```json
 {
   "installed": {
     "client_id": "xxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com",
@@ -42,13 +42,14 @@ Update `client_id` and `client_secret` to match your details
 
 At a minimum, just specify a filename:
 
-```
+```terminal
 ./youtubeuploader -filename blob.mp4
 ```
 
 If it is the first time you've run the utility, a browser window should popup and prompt you to provide Youtube credentials. A token will be created and stored in `request.token` file in the local directory for subsequent use. To run the utility on a headless-server, generate the token file locally first, then simply copy the token file along with `youtubeuploader` and `client_secrets.json` to the remote host.
 
 Full list of options:
+
 ```
   -cache string
     	token cache file (default "request.token")
@@ -93,6 +94,7 @@ Full list of options:
   -version
     	show version
 ```
+
 *NOTE:* When specifying a URL as the filename, the data will be streamed through the localhost (download from remote host, then upload to Youtube)
 
 
@@ -122,6 +124,7 @@ Video title, description etc can specified via the command line flags or via a J
   "language":  "fr"
 }
 ```
+
 - all fields are optional. Command line flags will be used by default (where available)
 - use `\n` in the description to insert newlines
 - times can be provided in one of two formats: `yyyy-mm-dd` (UTC) or `yyyy-mm-ddThh:mm:ss+zz:zz`
