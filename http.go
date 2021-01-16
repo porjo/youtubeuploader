@@ -51,6 +51,7 @@ type VideoMeta struct {
 	License             string `json:"license,omitempty"`
 	PublicStatsViewable bool   `json:"publicStatsViewable,omitempty"`
 	PublishAt           Date   `json:"publishAt,omitempty"`
+	MadeForKids         bool   `json:"madeForKids,omitempty"`
 
 	// recording details
 	Location            *youtube.GeoPoint `json:"location,omitempty"`

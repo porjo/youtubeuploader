@@ -179,8 +179,8 @@ func main() {
 	fmt.Printf("Upload successful! Video ID: %v\n", video.Id)
 
 	if *metaJSONout != "" {
-		videoMeta, _ := json.Marshal(video)
-		err = ioutil.WriteFile(*metaJSONout, videoMeta, 0644)
+		JSONOut, _ := json.Marshal(video)
+		err = ioutil.WriteFile(*metaJSONout, JSONOut, 0644)
 		if err != nil {
 			log.Fatalf("Error writing to video metadata file '%s': %s\n", *metaJSONout, err)
 		}
@@ -219,14 +219,6 @@ func main() {
 	plx := &Playlistx{}
 	if upload.Status.PrivacyStatus != "" {
 		plx.PrivacyStatus = upload.Status.PrivacyStatus
-	}
-	// PlaylistID is deprecated in favour of PlaylistIDs
-	if videoMeta.PlaylistID != "" {
-		plx.Id = videoMeta.PlaylistID
-		err = plx.AddVideoToPlaylist(service, video.Id)
-		if err != nil {
-			log.Fatalf("Error adding video to playlist: %s", err)
-		}
 	}
 
 	if len(videoMeta.PlaylistIDs) > 0 {
