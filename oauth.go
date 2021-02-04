@@ -24,12 +24,11 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"time"
 
+	"github.com/pkg/browser"
 	"golang.org/x/oauth2"
 )
 
@@ -83,24 +82,6 @@ type ClientConfig struct {
 type Config struct {
 	Installed ClientConfig `json:"installed"`
 	Web       ClientConfig `json:"web"`
-}
-
-// openURL opens a browser window to the specified location.
-// This code originally appeared at:
-//   http://stackoverflow.com/questions/10377243/how-can-i-launch-a-process-that-is-not-a-file-in-go
-func openURL(url string) error {
-	var err error
-	switch runtime.GOOS {
-	case "linux":
-		err = exec.Command("xdg-open", url).Start()
-	case "windows":
-		err = exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
-	case "darwin":
-		err = exec.Command("open", url).Start()
-	default:
-		err = fmt.Errorf("Cannot open URL %s on this platform", url)
-	}
-	return err
 }
 
 // readConfig reads the configuration from clientSecretsFile.
@@ -216,7 +197,7 @@ func buildOAuthHTTPClient(ctx context.Context, scopes []string) (*http.Client, e
 		var cbs CallbackStatus
 
 		if *headlessAuth {
-			fmt.Printf("Visit the URL for the auth dialog: %v\n", url)
+			fmt.Printf("Visit the URL for the auth dialog: %s\n", url)
 
 			fmt.Printf("Enter authorisation code here: ")
 			// FIXME: how to check state?
@@ -225,10 +206,11 @@ func buildOAuthHTTPClient(ctx context.Context, scopes []string) (*http.Client, e
 				return nil, err
 			}
 		} else {
-			err = openURL(url)
+			err = browser.OpenURL(url)
 			if err != nil {
-				fmt.Println("Visit the URL below to get a code.",
-					" This program will pause until the site is visted.")
+				fmt.Printf("Error opening URL: %s\n\n", err)
+				fmt.Printf("Visit the URL below to get a code.",
+					" This program will pause until the site is visited.\n\n%s\n", url)
 			} else {
 				fmt.Println("Your browser has been opened to an authorization URL.",
 					" This program will resume once authorization has been provided.")
