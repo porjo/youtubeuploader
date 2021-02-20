@@ -116,7 +116,7 @@ func readConfig(scopes []string) (*oauth2.Config, error) {
 	if len(cfg2.RedirectURIs) > 0 {
 		redirURL = cfg2.RedirectURIs[0]
 	} else {
-		fmt.Printf("Redirect URL could not be found. Using default: http://localhost:8080/oauth2callback")
+		fmt.Printf("Redirect URL could not be found. Using default: http://localhost:8080/oauth2callback\n")
 		redirURL = "http://localhost:8080/oauth2callback"
 	}
 

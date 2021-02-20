@@ -17,26 +17,26 @@ Talking to the Youtube API requires oauth2 authentication. As such, you must:
 
 1. Create an account on the [Google Developers Console](https://console.developers.google.com)
 1. Register a new app there
-1. Enable the Youtube API (APIs & Auth -> APIs)
-1. Create Client ID (APIs & Auth -> Credentials), select 'Web application'
+1. Enable the Youtube API (APIs & Services -> Enable APIs and Services)
+1. Create Client ID (APIs & Auth -> Credentials -> Create Credentials), select 'Oauth client ID', select type 'Web application'
 1. Add an 'Authorized redirect URI' of 'http://localhost:8080/oauth2callback'
-1. Take note of the `Client ID` and `Client secret` values
-
-The utility looks for `client_secrets.json` in the local directory. Create it first using the details from above:
+1. Download the client secrets JSON file (click download icon next to newly created client ID) and save it as file `client_secrets.json` in the same directory as the utility e.g.
 
 ```
 {
-  "installed": {
-    "client_id": "xxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com",
-    "client_secret": "xxxxxxxxxxxxxxxxxxxxx",
-    "redirect_uris": ["http://localhost:8080/oauth2callback"],
+  "web": {
+    "client_id": "xxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com",
+    "project_id": "youtubeuploader-yyyyy",
     "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-    "token_uri": "https://accounts.google.com/o/oauth2/token"
+    "token_uri": "https://oauth2.googleapis.com/token",
+    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+    "client_secret": "xxxxxxxxxxxxxxxxxxxx",
+    "redirect_uris": [
+      "http://localhost:8080/oauth2callback"
+    ]
   }
 }
 ```
-
-Update `client_id` and `client_secret` to match your details
 
 ## Usage
 
