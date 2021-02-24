@@ -16,7 +16,7 @@ rm -f youtubeuploader_linux_arm64
 sha256sum youtubeuploader_linux_arm64.tar.gz >> sha256-checksums
 ) &
 
-(env GOOS=linux GOARCH=amd64 go build -ldflags "-X main.appVersion=$VER" -o youtubeuploader_linux_amd64
+(env GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-X main.appVersion=$VER" -o youtubeuploader_linux_amd64
 tar -czf youtubeuploader_linux_amd64.tar.gz youtubeuploader_linux_amd64
 rm -f youtubeuploader_linux_amd64
 sha256sum youtubeuploader_linux_amd64.tar.gz >> sha256-checksums
