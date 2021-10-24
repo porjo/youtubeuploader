@@ -106,7 +106,7 @@ Video title, description etc can specified via the command line flags or via a J
   "description": "my test description",
   "tags": ["test tag1", "test tag2"],
   "privacyStatus": "private",
-  "madeForKids": "false",
+  "madeForKids": false,
   "embeddable": true,
   "license": "creativeCommon",
   "publicStatsViewable": true,
