@@ -178,8 +178,24 @@ func Open(filename string) (io.ReadCloser, int64, error) {
 			return reader, 0, fmt.Errorf("error stat'ing %s: %s", filename, err)
 		}
 
+		// check the file looks like a video
+		buf := make([]byte, 512)
+		_, err = file.Read(buf)
+		if err != nil {
+			return reader, 0, fmt.Errorf("error reading %s: %s", filename, err)
+		}
+		_, err = file.Seek(0, 0)
+		if err != nil {
+			return reader, 0, fmt.Errorf("error reading %s: %s", filename, err)
+		}
+		contentType := http.DetectContentType(buf)
+		if !strings.HasPrefix(contentType, "video") && contentType != "application/octet-stream" {
+			fmt.Printf("WARNING: input file doesn't appear to be a video. It has content type '%s'\n", contentType)
+		}
+
 		reader = file
 		filesize = fileInfo.Size()
+
 	}
 	return reader, filesize, err
 }
