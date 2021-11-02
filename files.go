@@ -76,7 +76,7 @@ func LoadVideoMeta(filename string, video *youtube.Video) (*VideoMeta, error) {
 			video.Status.PrivacyStatus = videoMeta.PrivacyStatus
 		}
 		if videoMeta.MadeForKids {
-			video.Status.MadeForKids = true
+			video.Status.SelfDeclaredMadeForKids = true
 		}
 		if videoMeta.Embeddable {
 			video.Status.Embeddable = true
