@@ -54,9 +54,7 @@ type VideoMeta struct {
 	MadeForKids         bool   `json:"madeForKids,omitempty"`
 
 	// recording details
-	Location            *youtube.GeoPoint `json:"location,omitempty"`
-	LocationDescription string            `json:"locationDescription,omitempty"`
-	RecordingDate       Date              `json:"recordingDate,omitempty"`
+	RecordingDate Date `json:"recordingDate,omitempty"`
 
 	// PlaylistID is deprecated in favour of PlaylistIDs
 	PlaylistID     string   `json:"playlistId,omitempty"`

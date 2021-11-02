@@ -57,12 +57,16 @@ func LoadVideoMeta(filename string, video *youtube.Video) (*VideoMeta, error) {
 		video.Snippet.Title = videoMeta.Title
 		video.Snippet.Description = videoMeta.Description
 		video.Snippet.CategoryId = videoMeta.CategoryId
-		if videoMeta.Location != nil {
-			video.RecordingDetails.Location = videoMeta.Location
-		}
-		if videoMeta.LocationDescription != "" {
-			video.RecordingDetails.LocationDescription = videoMeta.LocationDescription
-		}
+		// Location has been deprecated by Google
+		// see: https://developers.google.com/youtube/v3/revision_history#release_notes_06_01_2017
+		/*
+			if videoMeta.Location != nil {
+				video.RecordingDetails.Location = videoMeta.Location
+			}
+			if videoMeta.LocationDescription != "" {
+				video.RecordingDetails.LocationDescription = videoMeta.LocationDescription
+			}
+		*/
 		if !videoMeta.RecordingDate.IsZero() {
 			video.RecordingDetails.RecordingDate = videoMeta.RecordingDate.UTC().Format(ytDateLayout)
 		}
