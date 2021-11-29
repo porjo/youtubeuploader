@@ -4,6 +4,8 @@
 
 VER=$(git describe --tags)
 
+! git verify-tag $VER &> /dev/null && echo "ERROR: git tag $VER not signed" && exit 1
+
 (env GOOS=linux GOARCH=arm GOARM=7 go build -ldflags "-X main.appVersion=$VER" -o youtubeuploader_linux_armv7
 tar -czf youtubeuploader_linux_armv7.tar.gz  youtubeuploader_linux_armv7
 rm -f youtubeuploader_linux_armv7
