@@ -25,6 +25,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"golang.org/x/oauth2"
@@ -121,13 +122,14 @@ func main() {
 		Transport: transport,
 	})
 
-	var quitChan chanChan
-	if !*quiet {
-		quitChan = make(chanChan)
-		go func() {
-			Progress(quitChan, transport, filesize)
-		}()
+	p := &Progress{Quiet: *quiet, Transport: transport, Filesize: filesize}
+	signalChan := make(chan os.Signal, 1)
+	if runtime.GOOS != "windows" {
+		SetSignalNotify(signalChan)
 	}
+	quitChan := make(chanChan)
+	go p.Progress(quitChan, signalChan)
+
 	client, err := buildOAuthHTTPClient(ctx, []string{youtube.YoutubeUploadScope, youtube.YoutubepartnerScope, youtube.YoutubeScope})
 	if err != nil {
 		log.Fatalf("Error building OAuth client: %v", err)
@@ -163,11 +165,10 @@ func main() {
 	call := service.Videos.Insert([]string{"snippet", "status", "recordingDetails"}, upload)
 	video, err = call.NotifySubscribers(*notifySubscribers).Media(reader, option).Do()
 
-	if quitChan != nil {
-		quit := make(chan struct{})
-		quitChan <- quit
-		<-quit
-	}
+	quit := make(chan struct{})
+	quitChan <- quit
+	// wait here until quit gets closed
+	<-quit
 
 	if err != nil {
 		if video != nil {
