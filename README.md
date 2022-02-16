@@ -95,6 +95,7 @@ Full list of options:
 ```
 *NOTE:* When specifying a URL as the filename, the data will be streamed through the localhost (download from remote host, then upload to Youtube)
 
+If `-quiet` is specified, no upload progress will be displayed. Current progress can be output by sending signal `USR1` to the process e.g. `kill -USR1 <pid>` (Linux/Unix only).
 
 ### Metadata
 
