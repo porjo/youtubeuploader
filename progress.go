@@ -16,33 +16,53 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"time"
 )
 
-func Progress(quitChan chanChan, transport *limitTransport, filesize int64) {
+type Progress struct {
+	Erase     int
+	Transport *limitTransport
+	Filesize  int64
+	Quiet     bool
+}
+
+func (p *Progress) Progress(quitChan chanChan, signalChan chan os.Signal) {
 	ticker := time.Tick(time.Second)
-	var erase int
 	for {
 		select {
 		case <-ticker:
-			if transport.reader != nil {
-				s := transport.reader.Monitor.Status()
-				curRate := float32(s.CurRate)
-				var status string
-				if curRate >= 125000 {
-					status = fmt.Sprintf("Progress: %8.2f Mbps, %d / %d (%s) ETA %8s", curRate/125000, s.Bytes, filesize, s.Progress, s.TimeRem)
-				} else {
-					status = fmt.Sprintf("Progress: %8.2f Kbps, %d / %d (%s) ETA %8s", curRate/125, s.Bytes, filesize, s.Progress, s.TimeRem)
-				}
-				fmt.Printf("\r%s\r%s", strings.Repeat(" ", erase), status)
-				erase = len(status)
+			if !p.Quiet {
+				p.progressOut()
 			}
+		case <-signalChan:
+			p.progressOut()
 		case ch := <-quitChan:
 			// final newline
 			fmt.Println()
 			close(ch)
 			return
+		}
+	}
+}
+
+func (p *Progress) progressOut() {
+	if p.Transport.reader != nil {
+		s := p.Transport.reader.Monitor.Status()
+		curRate := float32(s.CurRate)
+		var status string
+		if curRate >= 125000 {
+			status = fmt.Sprintf("Progress: %8.2f Mbps, %d / %d (%s) ETA %8s", curRate/125000, s.Bytes, p.Filesize, s.Progress, s.TimeRem)
+		} else {
+			status = fmt.Sprintf("Progress: %8.2f Kbps, %d / %d (%s) ETA %8s", curRate/125, s.Bytes, p.Filesize, s.Progress, s.TimeRem)
+		}
+		if p.Quiet {
+			fmt.Printf("%s\n", status)
+		} else {
+			// Erase to start of line, then output status
+			fmt.Printf("\r%s\r%s", strings.Repeat(" ", p.Erase), status)
+			p.Erase = len(status)
 		}
 	}
 }
