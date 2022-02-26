@@ -25,7 +25,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 
 	"golang.org/x/oauth2"
@@ -124,9 +123,7 @@ func main() {
 
 	p := &Progress{Quiet: *quiet, Transport: transport, Filesize: filesize}
 	signalChan := make(chan os.Signal, 1)
-	if runtime.GOOS != "windows" {
-		SetSignalNotify(signalChan)
-	}
+	SetSignalNotify(signalChan)
 	quitChan := make(chanChan)
 	go p.Progress(quitChan, signalChan)
 

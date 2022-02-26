@@ -22,10 +22,11 @@ import (
 )
 
 type Progress struct {
-	Erase     int
 	Transport *limitTransport
 	Filesize  int64
 	Quiet     bool
+
+	erase int
 }
 
 func (p *Progress) Progress(quitChan chanChan, signalChan chan os.Signal) {
@@ -60,9 +61,9 @@ func (p *Progress) progressOut() {
 		if p.Quiet {
 			fmt.Printf("%s\n", status)
 		} else {
-			// Erase to start of line, then output status
-			fmt.Printf("\r%s\r%s", strings.Repeat(" ", p.Erase), status)
-			p.Erase = len(status)
+			// erase to start of line, then output status
+			fmt.Printf("\r%s\r%s", strings.Repeat(" ", p.erase), status)
+			p.erase = len(status)
 		}
 	}
 }
