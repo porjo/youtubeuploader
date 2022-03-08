@@ -4,11 +4,12 @@ before:
   hooks:
     # You may remove this if you don't use go modules.
     - go mod tidy
+    - bash check_tag.sh {{.Version}}
 builds:
   - env:
     - CGO_ENABLED=0
     ldflags:
-      - X main.appVersion={{.Version}}
+      - -X main.appVersion={{.Version}}
     targets:
       - linux_amd64
       - linux_arm64
