@@ -1,0 +1,31 @@
+# This is an example .goreleaser.yml file with some sensible defaults.
+# Make sure to check the documentation at https://goreleaser.com
+before:
+  hooks:
+    # You may remove this if you don't use go modules.
+    - go mod tidy
+builds:
+  - env:
+    - CGO_ENABLED=0
+    ldflags:
+      - X main.appVersion={{.Version}}
+    targets:
+      - linux_amd64
+      - linux_arm64
+      - linux_arm_7
+      - windows_amd64
+      - darwin_amd64
+      - freebsd_amd64
+      - openbsd_amd64
+archives:
+  -
+    replacements:
+      darwin: Darwin
+      linux: Linux
+      windows: Windows
+      amd64: x86_64
+      freebsd: FreeBSD
+      openbsd: OpenBSD
+    format_overrides:
+      - goos: windows
+        format: zip

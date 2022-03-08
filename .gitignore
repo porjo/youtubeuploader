@@ -9,3 +9,4 @@
 .*.swp
 vendor
 youtubeuploader
+dist/
