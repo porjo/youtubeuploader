@@ -16,10 +16,12 @@ Grab a [precompiled binary](https://github.com/porjo/youtubeuploader/releases) f
 Talking to the Youtube API requires oauth2 authentication. As such, you must:
 
 1. Create an account on the [Google Developers Console](https://console.developers.google.com)
-1. Register a new app there
-1. Enable the Youtube API (APIs & Services -> Enable APIs and Services)
-1. Create Client ID (APIs & Auth -> Credentials -> Create Credentials), select 'Oauth client ID', select type 'Web application'
-1. Add an 'Authorized redirect URI' of 'http://localhost:8080/oauth2callback'
+1. Create a new project for this app
+1. Enable the Youtube API (APIs & Services -> Enable APIs and Services -> Click 'ENABLE APIS AND SERVICES' top right). Select 'YouTube Data API v3'
+1. Create OAuth consent screen (APIs & Services -> OAuth Consent Screen)
+   - Add a test user. This can be any Google User account but it should correspond with the Youtube account where videos will be uploaded.
+1. Create Credentials (APIs & Services -> Credentials -> click 'CREATE CREDENTIALS'), select 'OAuth client ID', select 'Web application'
+   - Add an 'Authorized redirect URI' of 'http://localhost:8080/oauth2callback'
 1. Download the client secrets JSON file (click download icon next to newly created client ID) and save it as file `client_secrets.json` in the same directory as the utility e.g.
 
 ```
