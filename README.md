@@ -64,8 +64,6 @@ Full list of options:
     	video description (default "uploaded by youtubeuploader")
   -filename string
     	video filename. Can be a URL. Read from stdin with '-'
-  -headlessAuth
-    	set this if no browser available for the oauth authorisation step
   -language string
     	video language (default "en")
   -limitBetween string
@@ -127,17 +125,15 @@ Video title, description etc can specified via the command line flags or via a J
 
 ## Alternative Oauth setup for headless clients
 
-If you do not have access to a web browser on the host where `youtubeuploader` is installed, you may follow this oauth setup method instead:
+NOTE: this option has been removed as it is no longer supported by Google. See [issue #116](https://github.com/porjo/youtubeuploader/issues/116) for more information.
 
-1. Create an account on the [Google Developers Console](https://console.developers.google.com)
-1. Register a new app there
-1. Enable the [Youtube API (APIs & Auth -> APIs)](https://console.cloud.google.com/apis/api/youtube.googleapis.com)
-1. Go to the [YouTube API's Credentials](https://console.cloud.google.com/apis/api/youtube.googleapis.com/credentials) section, click "Create credentials" of type "OAuth client ID", select Application Type 'Other' and name it something like "youtubeuploader"; once created click the download (JSON) button in the list and saving it as `client_secrets.json` in the `youtubeuploader` directory
-1. Run `youtubeuploader` for the first time, passing the `-headlessAuth` parameter
-1. Copy-and-paste the URL displayed and open that in a browser
-1. Copy the resulting authorisation code and paste that into the `youtubeuploader` prompt: *"Enter authorisation code here:"*
+## Releases
 
-(subsequent invocations of `youtubeuploader` do not require the `-headlessAuth` parameter)
+Releases are built with [Goreleaser](https://github.com/goreleaser/goreleaser):
+```
+go tag -s <tag>
+goreleaser release
+```
 
 ## Credit
 
