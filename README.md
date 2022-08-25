@@ -131,8 +131,10 @@ NOTE: this option has been removed as it is no longer supported by Google. See [
 
 Releases are built with [Goreleaser](https://github.com/goreleaser/goreleaser):
 ```
-go tag -s <tag>
-goreleaser release
+# Signed tag
+git tag -s <tag>
+git push --tags
+GITHUB_TOKEN=xxxxyyy goreleaser release
 ```
 
 ## Credit
