@@ -182,43 +182,30 @@ func buildOAuthHTTPClient(ctx context.Context, scopes []string) (*http.Client, e
 		randState := fmt.Sprintf("st%d", time.Now().UnixNano())
 
 		callbackCh := make(chan CallbackStatus)
-		if !*headlessAuth {
-			// Start web server.
-			// This is how this program receives the authorization code
-			// when the browser redirects.
-			callbackCh, err = startWebServer()
-			if err != nil {
-				return nil, err
-			}
+		// Start web server.
+		// This is how this program receives the authorization code
+		// when the browser redirects.
+		callbackCh, err = startWebServer()
+		if err != nil {
+			return nil, err
 		}
 
 		url := config.AuthCodeURL(randState, oauth2.AccessTypeOffline, oauth2.ApprovalForce)
 
 		var cbs CallbackStatus
 
-		if *headlessAuth {
-			fmt.Printf("Visit the URL for the auth dialog: %s\n", url)
-
-			fmt.Printf("Enter authorisation code here: ")
-			// FIXME: how to check state?
-			cbs.state = randState
-			if _, err := fmt.Scanln(&cbs.code); err != nil {
-				return nil, err
-			}
+		err = browser.OpenURL(url)
+		if err != nil {
+			fmt.Printf("Error opening URL: %s\n\n", err)
+			fmt.Printf("Visit the URL below to get a code.",
+				" This program will pause until the site is visited.\n\n%s\n", url)
 		} else {
-			err = browser.OpenURL(url)
-			if err != nil {
-				fmt.Printf("Error opening URL: %s\n\n", err)
-				fmt.Printf("Visit the URL below to get a code.",
-					" This program will pause until the site is visited.\n\n%s\n", url)
-			} else {
-				fmt.Println("Your browser has been opened to an authorization URL.",
-					" This program will resume once authorization has been provided.")
-			}
-
-			// Wait for the web server to get the code.
-			cbs = <-callbackCh
+			fmt.Println("Your browser has been opened to an authorization URL.",
+				" This program will resume once authorization has been provided.")
 		}
+
+		// Wait for the web server to get the code.
+		cbs = <-callbackCh
 
 		if cbs.state != randState {
 			return nil, fmt.Errorf("expecting state '%s', received state '%s'", randState, cbs.state)
