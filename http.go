@@ -92,6 +92,10 @@ func (t *limitTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 		r.Body = &limitChecker{t.lr, t.reader}
 	}
 
+	if *debug {
+		fmt.Printf("[DEBUG] Requesting URL '%v'\n", r.URL)
+	}
+
 	return t.rt.RoundTrip(r)
 }
 
