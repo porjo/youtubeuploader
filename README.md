@@ -60,6 +60,8 @@ Full list of options:
     	video category Id
   -chunksize int
     	size (in bytes) of each upload chunk. A zero value will cause all data to be uploaded in a single request (default 16777216)
+  -debug
+    	turn on verbose log output
   -description string
     	video description (default "uploaded by youtubeuploader")
   -filename string
@@ -73,7 +75,7 @@ Full list of options:
   -metaJSONout string
     	filename to write uploaded video metadata into (optional)
   -notify
-    	notify channel subscribers of new video (default true)
+    	notify channel subscribers of new video. Specify '-notify=false' to disable. (default true)
   -oAuthPort int
     	TCP port to listen on when requesting an oAuth token (default 8080)
   -privacy string
