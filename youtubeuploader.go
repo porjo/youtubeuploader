@@ -20,7 +20,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -178,7 +177,7 @@ func main() {
 
 	if *metaJSONout != "" {
 		JSONOut, _ := json.Marshal(video)
-		err = ioutil.WriteFile(*metaJSONout, JSONOut, 0644)
+		err = os.WriteFile(*metaJSONout, JSONOut, 0644)
 		if err != nil {
 			log.Fatalf("Error writing to video metadata file '%s': %s\n", *metaJSONout, err)
 		}

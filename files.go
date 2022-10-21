@@ -18,7 +18,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"strconv"
@@ -40,15 +39,15 @@ func LoadVideoMeta(filename string, video *youtube.Video) (*VideoMeta, error) {
 	videoMeta := &VideoMeta{}
 	// attempt to load from meta JSON, otherwise use values specified from command line flags
 	if filename != "" {
-		file, e := ioutil.ReadFile(filename)
+		file, e := os.ReadFile(filename)
 		if e != nil {
-			e2 := fmt.Errorf("Error reading file '%s': %s\n", filename, e)
+			e2 := fmt.Errorf("error reading file '%s': %s", filename, e)
 			return nil, e2
 		}
 
 		e = json.Unmarshal(file, &videoMeta)
 		if e != nil {
-			e2 := fmt.Errorf("Error parsing file '%s': %s\n", filename, e)
+			e2 := fmt.Errorf("error parsing file '%s': %s", filename, e)
 			return nil, e2
 		}
 

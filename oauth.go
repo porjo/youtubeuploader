@@ -20,7 +20,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
@@ -87,8 +86,9 @@ type Config struct {
 // readConfig reads the configuration from clientSecretsFile.
 // It returns an oauth configuration object for use with the Google API client.
 func readConfig(scopes []string) (*oauth2.Config, error) {
+
 	// Read the secrets file
-	data, err := ioutil.ReadFile(*clientSecretsFile)
+	data, err := os.ReadFile(*clientSecretsFile)
 	if err != nil {
 		pwd, _ := os.Getwd()
 		fullPath := filepath.Join(pwd, *clientSecretsFile)
@@ -109,7 +109,7 @@ func readConfig(scopes []string) (*oauth2.Config, error) {
 	} else if cfg1.Installed.ClientID != "" {
 		cfg2 = cfg1.Installed
 	} else {
-		return nil, errors.New("Client secrets file format not recognised")
+		return nil, errors.New("client secrets file format not recognised")
 	}
 
 	redirURL := ""
@@ -197,8 +197,7 @@ func buildOAuthHTTPClient(ctx context.Context, scopes []string) (*http.Client, e
 		err = browser.OpenURL(url)
 		if err != nil {
 			fmt.Printf("Error opening URL: %s\n\n", err)
-			fmt.Printf("Visit the URL below to get a code.",
-				" This program will pause until the site is visited.\n\n%s\n", url)
+			fmt.Printf("Visit the URL below to get a code. This program will pause until the site is visited.\n\n%s\n", url)
 		} else {
 			fmt.Println("Your browser has been opened to an authorization URL.",
 				" This program will resume once authorization has been provided.")
@@ -211,7 +210,7 @@ func buildOAuthHTTPClient(ctx context.Context, scopes []string) (*http.Client, e
 			return nil, fmt.Errorf("expecting state '%s', received state '%s'", randState, cbs.state)
 		}
 
-		token, err = config.Exchange(oauth2.NoContext, cbs.code)
+		token, err = config.Exchange(context.TODO(), cbs.code)
 		if err != nil {
 			return nil, err
 		}
