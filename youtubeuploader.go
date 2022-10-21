@@ -177,7 +177,7 @@ func main() {
 
 	if *metaJSONout != "" {
 		JSONOut, _ := json.Marshal(video)
-		err = os.WriteFile(*metaJSONout, JSONOut, 0644)
+		err = os.WriteFile(*metaJSONout, JSONOut, 0666)
 		if err != nil {
 			log.Fatalf("Error writing to video metadata file '%s': %s\n", *metaJSONout, err)
 		}
