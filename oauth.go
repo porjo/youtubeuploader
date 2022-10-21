@@ -90,9 +90,25 @@ func readConfig(scopes []string) (*oauth2.Config, error) {
 	// Read the secrets file
 	data, err := os.ReadFile(*clientSecretsFile)
 	if err != nil {
-		pwd, _ := os.Getwd()
-		fullPath := filepath.Join(pwd, *clientSecretsFile)
-		return nil, fmt.Errorf(missingClientSecretsMessage, fullPath)
+		// If file doesn't exist fallback to reading from OS specific default config dir
+		if os.IsNotExist(err) {
+			confDir, err := os.UserConfigDir()
+			if err != nil {
+				return nil, err
+			}
+			fullPath := filepath.Join(confDir, "youtubeuploader", "client_secrets.json")
+			if *debug {
+				fmt.Printf("[DEBUG] Reading client secrets from '%v'\n", fullPath)
+			}
+			data, err = os.ReadFile(fullPath)
+			if err != nil {
+				return nil, fmt.Errorf(missingClientSecretsMessage, fullPath)
+			}
+		} else {
+			pwd, _ := os.Getwd()
+			fullPath := filepath.Join(pwd, *clientSecretsFile)
+			return nil, fmt.Errorf(missingClientSecretsMessage, fullPath)
+		}
 	}
 
 	cfg1 := new(Config)
