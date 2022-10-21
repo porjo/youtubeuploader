@@ -121,13 +121,10 @@ Video title, description etc can specified via the command line flags or via a J
   "language":  "fr"
 }
 ```
-- all fields are optional. Command line flags will be used by default (where available)
+- all fields are optional
 - use `\n` in the description to insert newlines
 - times can be provided in one of two formats: `yyyy-mm-dd` (UTC) or `yyyy-mm-ddThh:mm:ss+zz:zz`
-
-## Alternative Oauth setup for headless clients
-
-NOTE: this option has been removed as it is no longer supported by Google. See [issue #116](https://github.com/porjo/youtubeuploader/issues/116) for more information.
+- any values supplied via command line will take precedence
 
 ## Releases
 
