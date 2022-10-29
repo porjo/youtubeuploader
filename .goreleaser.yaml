@@ -13,6 +13,7 @@ builds:
     targets:
       - linux_amd64
       - linux_arm64
+      - linux_arm_6
       - linux_arm_7
       - windows_amd64
       - darwin_amd64
