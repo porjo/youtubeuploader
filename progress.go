@@ -51,7 +51,7 @@ func (p *Progress) Progress(quitChan chanChan, signalChan chan os.Signal) {
 func (p *Progress) progressOut() {
 	if p.Transport.reader != nil {
 		s := p.Transport.reader.Monitor.Status()
-		curRate := float32(s.CurRate)
+		curRate := float64(s.CurRate)
 		var status string
 		if curRate >= 125000 {
 			status = fmt.Sprintf("Progress: %8.2f Mbps, %d / %d (%s) ETA %8s", curRate/125000, s.Bytes, p.Filesize, s.Progress, s.TimeRem)

@@ -240,3 +240,9 @@ func main() {
 		}
 	}
 }
+
+func debugf(format string, args ...interface{}) {
+	if *debug {
+		fmt.Printf("[DEBUG] "+format, args)
+	}
+}

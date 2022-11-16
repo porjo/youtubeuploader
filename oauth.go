@@ -97,9 +97,7 @@ func readConfig(scopes []string) (*oauth2.Config, error) {
 				return nil, err
 			}
 			fullPath := filepath.Join(confDir, "youtubeuploader", "client_secrets.json")
-			if *debug {
-				fmt.Printf("[DEBUG] Reading client secrets from '%v'\n", fullPath)
-			}
+			debugf("Reading client secrets from '%v'\n", fullPath)
 			data, err = os.ReadFile(fullPath)
 			if err != nil {
 				return nil, fmt.Errorf(missingClientSecretsMessage, fullPath)

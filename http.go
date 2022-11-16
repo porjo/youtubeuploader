@@ -66,13 +66,11 @@ type VideoMeta struct {
 }
 
 func (t *limitTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	contentType := r.Header.Get("Content-Type")
+
 	// FIXME: this is messy. Need a better way to detect rountrip associated with video upload
-	// Content-Type starts with 'multipart/related' where chunksize >= filesize (including chunksize 0)
-	// for chunksize < filesize either:
-	// - Content-Type starting with 'video'
-	// - Content-Type application/json and extra header 'X-Upload-Content-Type: application/octet-stream' is used instead
-	if strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/related") ||
-		strings.HasPrefix(r.Header.Get("Content-Type"), "video") ||
+	if strings.HasPrefix(contentType, "multipart/related") ||
+		strings.HasPrefix(contentType, "video") ||
 		r.Header.Get("X-Upload-Content-Type") == "application/octet-stream" {
 		var monitor *flowrate.Monitor
 
@@ -92,9 +90,10 @@ func (t *limitTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 		r.Body = &limitChecker{t.lr, t.reader}
 	}
 
-	if *debug {
-		fmt.Printf("[DEBUG] Requesting URL '%v'\n", r.URL)
+	if contentType != "" {
+		debugf("Content-Type header value '%s'\n", contentType)
 	}
+	debugf("Requesting URL '%s'\n", r.URL)
 
 	return t.rt.RoundTrip(r)
 }
