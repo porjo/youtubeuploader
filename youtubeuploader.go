@@ -44,7 +44,7 @@ var (
 	tags              = flag.String("tags", "", "comma separated list of video tags")
 	privacy           = flag.String("privacy", "private", "video privacy status")
 	quiet             = flag.Bool("quiet", false, "suppress progress indicator")
-	rate              = flag.Int("ratelimit", 0, "rate limit upload in Kbps. No limit by default")
+	rateLimit         = flag.Int("ratelimit", 0, "rate limit upload in Kbps. No limit by default")
 	metaJSON          = flag.String("metaJSON", "", "JSON file containing title,description,tags etc (optional)")
 	metaJSONout       = flag.String("metaJSONout", "", "filename to write uploaded video metadata into (optional)")
 	limitBetween      = flag.String("limitBetween", "", "only rate limit between these times e.g. 10:00-14:00 (local time zone)")
@@ -243,6 +243,6 @@ func main() {
 
 func debugf(format string, args ...interface{}) {
 	if *debug {
-		fmt.Printf("[DEBUG] "+format, args)
+		fmt.Printf("[DEBUG] "+format, args...)
 	}
 }

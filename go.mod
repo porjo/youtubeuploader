@@ -4,8 +4,8 @@ go 1.19
 
 require (
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8
-	github.com/porjo/go-flowrate v0.0.0-20180927094419-b96d1011fd8e
 	golang.org/x/oauth2 v0.1.0
+	golang.org/x/time v0.2.0
 	google.golang.org/api v0.100.0
 )
 

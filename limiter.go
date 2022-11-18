@@ -15,11 +15,13 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
-	"github.com/porjo/go-flowrate/flowrate"
+	"golang.org/x/time/rate"
 )
 
 type limitRange struct {
@@ -28,31 +30,115 @@ type limitRange struct {
 }
 
 type limitChecker struct {
-	limitRange
-	reader *flowrate.Reader
+	lr      limitRange
+	reader  io.ReadCloser
+	rl      *rate.Limiter
+	Monitor monitor
+}
+
+type monitor struct {
+	lastRead time.Time
+	start    time.Time
+	size     int64
+
+	status status
+}
+
+type status struct {
+	AvgRate  int64
+	Bytes    int64
+	TimeRem  time.Duration
+	Progress string
+}
+
+const bucketSize = 1000
+
+func NewLimitChecker(lr limitRange, r io.ReadCloser) *limitChecker {
+	lc := &limitChecker{lr: lr, reader: r}
+	return lc
+}
+
+func (m *monitor) Status() status {
+	return m.status
 }
 
 func (lc *limitChecker) Read(p []byte) (int, error) {
-	if lc.start.IsZero() || lc.end.IsZero() {
-		lc.reader.SetLimit(int64(*rate * 125))
-		return lc.reader.Read(p)
+
+	var err error
+	var read int
+
+	limit := false
+
+	if lc.Monitor.start.IsZero() {
+		lc.Monitor.start = time.Now()
 	}
 
-	now := time.Now()
+	if *rateLimit > 0 {
+		if lc.rl == nil {
+			lc.rl = rate.NewLimiter(rate.Limit(*rateLimit*125), bucketSize)
+		}
 
-	if now.Sub(lc.start) >= time.Hour*24 {
-		lc.start = lc.start.AddDate(0, 0, 1)
-		lc.end = lc.end.AddDate(0, 0, 1)
+		if lc.lr.start.IsZero() || lc.lr.end.IsZero() {
+			limit = true
+		} else {
+
+			if time.Since(lc.lr.start) >= time.Hour*24 {
+				lc.lr.start = lc.lr.start.AddDate(0, 0, 1)
+				lc.lr.end = lc.lr.end.AddDate(0, 0, 1)
+			}
+
+			now := time.Now()
+			if lc.lr.start.Before(now) && lc.lr.end.After(now) {
+				limit = true
+			} else {
+				limit = false
+			}
+		}
 	}
 
-	if lc.start.Before(now) && lc.end.After(now) {
-		// kbit/s to B/s = 1000/8 = 125
-		lc.reader.SetLimit(int64(*rate * 125))
+	if limit {
+
+		tokens := bucketSize
+		if len(p) < bucketSize {
+			tokens = len(p)
+		}
+
+		for {
+			var readL int
+
+			err = lc.rl.WaitN(context.Background(), tokens)
+			if err != nil {
+				break
+			}
+
+			readL, err = lc.reader.Read(p[read : read+tokens])
+			read += readL
+
+			if err != nil {
+				break
+			}
+
+			if read == len(p) {
+				break
+			}
+			if read+tokens > len(p) {
+				tokens = len(p) - read
+			}
+		}
 	} else {
-		lc.reader.SetLimit(0)
+		read, err = lc.reader.Read(p)
 	}
 
-	return lc.reader.Read(p)
+	lc.Monitor.status.Bytes += int64(read)
+	// bytes read will be greater than filesize due to HTTP headers etc, so reset to filesize
+	if lc.Monitor.status.Bytes > lc.Monitor.size {
+		lc.Monitor.status.Bytes = lc.Monitor.size
+	}
+	lc.Monitor.status.Progress = fmt.Sprintf("%.2f%", float64(lc.Monitor.status.Bytes)/float64(lc.Monitor.size)*100)
+	lc.Monitor.status.AvgRate = int64(float64(lc.Monitor.status.Bytes) / time.Since(lc.Monitor.start).Seconds())
+	lc.Monitor.status.TimeRem = time.Duration(float64(lc.Monitor.size-lc.Monitor.status.Bytes)/float64(lc.Monitor.status.AvgRate)) * time.Second
+
+	return read, err
 }
 
 func (lc *limitChecker) Close() error {

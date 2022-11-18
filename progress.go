@@ -51,12 +51,12 @@ func (p *Progress) Progress(quitChan chanChan, signalChan chan os.Signal) {
 func (p *Progress) progressOut() {
 	if p.Transport.reader != nil {
 		s := p.Transport.reader.Monitor.Status()
-		curRate := float64(s.CurRate)
+		avgRate := float64(s.AvgRate)
 		var status string
-		if curRate >= 125000 {
-			status = fmt.Sprintf("Progress: %8.2f Mbps, %d / %d (%s) ETA %8s", curRate/125000, s.Bytes, p.Filesize, s.Progress, s.TimeRem)
+		if avgRate >= 125000 {
+			status = fmt.Sprintf("Progress: %8.2f Mbps, %d / %d (%s) ETA %8s", avgRate/125000, s.Bytes, p.Filesize, s.Progress, s.TimeRem)
 		} else {
-			status = fmt.Sprintf("Progress: %8.2f Kbps, %d / %d (%s) ETA %8s", curRate/125, s.Bytes, p.Filesize, s.Progress, s.TimeRem)
+			status = fmt.Sprintf("Progress: %8.2f Kbps, %d / %d (%s) ETA %8s", avgRate/125, s.Bytes, p.Filesize, s.Progress, s.TimeRem)
 		}
 		if p.Quiet {
 			fmt.Printf("%s\n", status)
