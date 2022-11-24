@@ -134,7 +134,7 @@ func (lc *limitChecker) Read(p []byte) (int, error) {
 	if lc.Monitor.status.Bytes > lc.Monitor.size {
 		lc.Monitor.status.Bytes = lc.Monitor.size
 	}
-	lc.Monitor.status.Progress = fmt.Sprintf("%.2f%", float64(lc.Monitor.status.Bytes)/float64(lc.Monitor.size)*100)
+	lc.Monitor.status.Progress = fmt.Sprintf("%.1f%%", float64(lc.Monitor.status.Bytes)/float64(lc.Monitor.size)*100)
 	lc.Monitor.status.AvgRate = int64(float64(lc.Monitor.status.Bytes) / time.Since(lc.Monitor.start).Seconds())
 	lc.Monitor.status.TimeRem = time.Duration(float64(lc.Monitor.size-lc.Monitor.status.Bytes)/float64(lc.Monitor.status.AvgRate)) * time.Second
 
