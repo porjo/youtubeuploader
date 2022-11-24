@@ -19,7 +19,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/porjo/go-flowrate/flowrate"
 	"google.golang.org/api/youtube/v3"
 )
 
@@ -28,7 +27,7 @@ const inputTimeLayout = "15:04"
 type limitTransport struct {
 	rt       http.RoundTripper
 	lr       limitRange
-	reader   *flowrate.Reader
+	reader   *limitChecker
 	filesize int64
 }
 
@@ -71,23 +70,24 @@ func (t *limitTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 	// FIXME: this is messy. Need a better way to detect rountrip associated with video upload
 	if strings.HasPrefix(contentType, "multipart/related") ||
 		strings.HasPrefix(contentType, "video") ||
+		strings.HasPrefix(contentType, "application/octet-stream") ||
 		r.Header.Get("X-Upload-Content-Type") == "application/octet-stream" {
-		var monitor *flowrate.Monitor
+
+		var monitor *monitor
 
 		if t.reader != nil {
-			monitor = t.reader.Monitor
+			monitor = &t.reader.Monitor
 		}
 
-		// limit is set in limitChecker.Read
-		t.reader = flowrate.NewReader(r.Body, 0)
+		t.reader = NewLimitChecker(t.lr, r.Body)
 
 		if monitor != nil {
-			// carry over stats to new limiter
-			t.reader.Monitor = monitor
+			t.reader.Monitor = *monitor
 		} else {
-			t.reader.Monitor.SetTransferSize(t.filesize)
+			t.reader.Monitor.size = t.filesize
 		}
-		r.Body = &limitChecker{t.lr, t.reader}
+
+		r.Body = t.reader
 	}
 
 	if contentType != "" {
