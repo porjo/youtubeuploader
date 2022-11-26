@@ -53,6 +53,7 @@ var (
 	chunksize         = flag.Int("chunksize", googleapi.DefaultUploadChunkSize, "size (in bytes) of each upload chunk. A zero value will cause all data to be uploaded in a single request")
 	notifySubscribers = flag.Bool("notify", true, "notify channel subscribers of new video. Specify '-notify=false' to disable.")
 	debug             = flag.Bool("debug", false, "turn on verbose log output")
+	sendFileName      = flag.Bool("sendFilename", true, "send original file name to YouTube")
 
 	// this is set by compile-time to match git tag
 	appVersion string = "unknown"
@@ -159,6 +160,11 @@ func main() {
 	option = googleapi.ChunkSize(*chunksize)
 
 	call := service.Videos.Insert([]string{"snippet", "status", "recordingDetails"}, upload)
+	if *sendFileName && *filename != "" && *filename != "-" {
+		filetitle := filepath.Base(*filename)
+		debugf("Adding file name to request: '%s'\n", filetitle)
+		call.Header().Set("Slug", filetitle)
+	}
 	video, err = call.NotifySubscribers(*notifySubscribers).Media(reader, option).Do()
 
 	quit := make(chan struct{})
