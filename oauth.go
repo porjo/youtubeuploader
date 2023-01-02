@@ -189,49 +189,50 @@ func buildOAuthHTTPClient(ctx context.Context, scopes []string) (*http.Client, e
 	// the token is invalid or doesn't exist.
 	tokenCache := CacheFile(*cache)
 	token, err := tokenCache.Token()
+	if err == nil {
+		return config.Client(ctx, token), nil
+	}
+
+	// You must always provide a non-zero string and validate that it matches
+	// the state query parameter on your redirect callback
+	randState := fmt.Sprintf("st%d", time.Now().UnixNano())
+
+	callbackCh := make(chan CallbackStatus)
+	// Start web server.
+	// This is how this program receives the authorization code
+	// when the browser redirects.
+	callbackCh, err = startWebServer()
 	if err != nil {
+		return nil, err
+	}
 
-		// You must always provide a non-zero string and validate that it matches
-		// the state query parameter on your redirect callback
-		randState := fmt.Sprintf("st%d", time.Now().UnixNano())
+	url := config.AuthCodeURL(randState, oauth2.AccessTypeOffline, oauth2.ApprovalForce)
 
-		callbackCh := make(chan CallbackStatus)
-		// Start web server.
-		// This is how this program receives the authorization code
-		// when the browser redirects.
-		callbackCh, err = startWebServer()
-		if err != nil {
-			return nil, err
-		}
+	var cbs CallbackStatus
 
-		url := config.AuthCodeURL(randState, oauth2.AccessTypeOffline, oauth2.ApprovalForce)
+	err = browser.OpenURL(url)
+	if err != nil {
+		fmt.Printf("Error opening URL: %s\n\n", err)
+		fmt.Printf("Visit the URL below to get a code. This program will pause until the site is visited.\n\n%s\n", url)
+	} else {
+		fmt.Println("Your browser has been opened to an authorization URL.",
+			" This program will resume once authorization has been provided.")
+	}
 
-		var cbs CallbackStatus
+	// Wait for the web server to get the code.
+	cbs = <-callbackCh
 
-		err = browser.OpenURL(url)
-		if err != nil {
-			fmt.Printf("Error opening URL: %s\n\n", err)
-			fmt.Printf("Visit the URL below to get a code. This program will pause until the site is visited.\n\n%s\n", url)
-		} else {
-			fmt.Println("Your browser has been opened to an authorization URL.",
-				" This program will resume once authorization has been provided.")
-		}
+	if cbs.state != randState {
+		return nil, fmt.Errorf("expecting state '%s', received state '%s'", randState, cbs.state)
+	}
 
-		// Wait for the web server to get the code.
-		cbs = <-callbackCh
-
-		if cbs.state != randState {
-			return nil, fmt.Errorf("expecting state '%s', received state '%s'", randState, cbs.state)
-		}
-
-		token, err = config.Exchange(context.TODO(), cbs.code)
-		if err != nil {
-			return nil, err
-		}
-		err = tokenCache.PutToken(token)
-		if err != nil {
-			return nil, err
-		}
+	token, err = config.Exchange(context.TODO(), cbs.code)
+	if err != nil {
+		return nil, err
+	}
+	err = tokenCache.PutToken(token)
+	if err != nil {
+		return nil, err
 	}
 
 	return config.Client(ctx, token), nil
