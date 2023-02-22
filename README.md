@@ -44,7 +44,7 @@ Talking to the Youtube API requires oauth2 authentication. As such, you must:
 
 > All videos uploaded via the videos.insert endpoint from unverified API projects created after 28 July 2020 will be restricted to private viewing mode. To lift this restriction, each project must undergo an audit to verify compliance with the Terms of Service.
 
-See #86 for more information
+See [Issue #86](https://github.com/porjo/youtubeuploader/issues/86) for more information.
 
 ## Usage
 
