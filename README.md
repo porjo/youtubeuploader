@@ -40,6 +40,12 @@ Talking to the Youtube API requires oauth2 authentication. As such, you must:
 }
 ```
 
+**NOTE** Google will apply 'private' status on videos uploaded to newly created projects - from [Google's Announcement](https://developers.google.com/youtube/v3/revision_history#july-28,-2020):
+
+> All videos uploaded via the videos.insert endpoint from unverified API projects created after 28 July 2020 will be restricted to private viewing mode. To lift this restriction, each project must undergo an audit to verify compliance with the Terms of Service.
+
+See #86 for more information
+
 ## Usage
 
 At a minimum, just specify a filename:
