@@ -27,9 +27,17 @@ import (
 	"google.golang.org/api/youtube/v3"
 )
 
-const ytDateLayout = "2006-01-02T15:04:05.000Z" // ISO 8601 (YYYY-MM-DDThh:mm:ss.sssZ)
-const inputDateLayout = "2006-01-02"
-const inputDatetimeLayout = "2006-01-02T15:04:05-07:00"
+const (
+	ytDateLayout        = "2006-01-02T15:04:05.000Z" // ISO 8601 (YYYY-MM-DDThh:mm:ss.sssZ)
+	inputDateLayout     = "2006-01-02"
+	inputDatetimeLayout = "2006-01-02T15:04:05-07:00"
+
+	IMAGE MediaType = iota
+	VIDEO
+	CAPTION
+)
+
+type MediaType int
 
 type Date struct {
 	time.Time
@@ -41,13 +49,13 @@ func LoadVideoMeta(filename string, video *youtube.Video) (*VideoMeta, error) {
 	if filename != "" {
 		file, e := os.ReadFile(filename)
 		if e != nil {
-			e2 := fmt.Errorf("error reading file '%s': %s", filename, e)
+			e2 := fmt.Errorf("error reading file %q: %s", filename, e)
 			return nil, e2
 		}
 
 		e = json.Unmarshal(file, &videoMeta)
 		if e != nil {
-			e2 := fmt.Errorf("error parsing file '%s': %s", filename, e)
+			e2 := fmt.Errorf("error parsing file %q: %s", filename, e)
 			return nil, e2
 		}
 
@@ -136,7 +144,7 @@ func LoadVideoMeta(filename string, video *youtube.Video) (*VideoMeta, error) {
 	return videoMeta, nil
 }
 
-func Open(filename string) (io.ReadCloser, int64, error) {
+func Open(filename string, mediaType MediaType) (io.ReadCloser, int64, error) {
 	var reader io.ReadCloser
 	var filesize int64
 	var err error
@@ -177,7 +185,7 @@ func Open(filename string) (io.ReadCloser, int64, error) {
 			return reader, 0, fmt.Errorf("error stat'ing %s: %s", filename, err)
 		}
 
-		// check the file looks like a video
+		// check the file looks like the media type it is supposed to be
 		buf := make([]byte, 512)
 		_, err = file.Read(buf)
 		if err != nil {
@@ -188,8 +196,15 @@ func Open(filename string) (io.ReadCloser, int64, error) {
 			return reader, 0, fmt.Errorf("error reading %s: %s", filename, err)
 		}
 		contentType := http.DetectContentType(buf)
-		if !strings.HasPrefix(contentType, "video") && contentType != "application/octet-stream" {
-			fmt.Printf("WARNING: input file doesn't appear to be a video. It has content type '%s'\n", contentType)
+		switch mediaType {
+		case VIDEO:
+			if !strings.HasPrefix(contentType, "video") && contentType != "application/octet-stream" {
+				fmt.Printf("WARNING: input file %q doesn't appear to be a video. It has content type %q\n", filename, contentType)
+			}
+		case IMAGE:
+			if !strings.HasPrefix(contentType, "image") && contentType != "application/octet-stream" {
+				fmt.Printf("WARNING: input file %q doesn't appear to be an image. It has content type %q\n", filename, contentType)
+			}
 		}
 
 		reader = file

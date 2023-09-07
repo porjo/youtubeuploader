@@ -28,6 +28,7 @@ import (
 
 	"golang.org/x/oauth2"
 	"google.golang.org/api/googleapi"
+	"google.golang.org/api/option"
 	"google.golang.org/api/youtube/v3"
 )
 
@@ -91,7 +92,7 @@ func main() {
 		}
 	}
 
-	reader, filesize, err = Open(*filename)
+	reader, filesize, err = Open(*filename, VIDEO)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -99,7 +100,7 @@ func main() {
 
 	var thumbReader io.ReadCloser
 	if *thumbnail != "" {
-		thumbReader, _, err = Open(*thumbnail)
+		thumbReader, _, err = Open(*thumbnail, IMAGE)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -108,7 +109,7 @@ func main() {
 
 	var captionReader io.ReadCloser
 	if *caption != "" {
-		captionReader, _, err = Open(*caption)
+		captionReader, _, err = Open(*caption, CAPTION)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -143,7 +144,7 @@ func main() {
 		log.Fatalf("Error loading video meta data: %s", err)
 	}
 
-	service, err := youtube.New(client)
+	service, err := youtube.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
 		log.Fatalf("Error creating Youtube client: %s", err)
 	}
@@ -151,7 +152,7 @@ func main() {
 	if *filename == "-" {
 		fmt.Printf("Uploading file from pipe\n")
 	} else {
-		fmt.Printf("Uploading file '%s'\n", *filename)
+		fmt.Printf("Uploading file %q\n", *filename)
 	}
 
 	var option googleapi.MediaOption
@@ -162,7 +163,7 @@ func main() {
 	call := service.Videos.Insert([]string{"snippet", "status", "recordingDetails"}, upload)
 	if *sendFileName && *filename != "" && *filename != "-" {
 		filetitle := filepath.Base(*filename)
-		debugf("Adding file name to request: '%s'\n", filetitle)
+		debugf("Adding file name to request: %q\n", filetitle)
 		call.Header().Set("Slug", filetitle)
 	}
 	video, err = call.NotifySubscribers(*notifySubscribers).Media(reader, option).Do()
@@ -185,13 +186,13 @@ func main() {
 		JSONOut, _ := json.Marshal(video)
 		err = os.WriteFile(*metaJSONout, JSONOut, 0666)
 		if err != nil {
-			log.Fatalf("Error writing to video metadata file '%s': %s\n", *metaJSONout, err)
+			log.Fatalf("Error writing to video metadata file %q: %s\n", *metaJSONout, err)
 		}
-		fmt.Printf("Wrote video metadata to file '%s'\n", *metaJSONout)
+		fmt.Printf("Wrote video metadata to file %q\n", *metaJSONout)
 	}
 
 	if thumbReader != nil {
-		log.Printf("Uploading thumbnail '%s'...\n", *thumbnail)
+		log.Printf("Uploading thumbnail %q...\n", *thumbnail)
 		_, err = service.Thumbnails.Set(video.Id).Media(thumbReader).Do()
 		if err != nil {
 			log.Fatalf("Error making YouTube API call: %v", err)

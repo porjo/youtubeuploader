@@ -91,9 +91,9 @@ func (t *limitTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 	}
 
 	if contentType != "" {
-		debugf("Content-Type header value '%s'\n", contentType)
+		debugf("Content-Type header value %q\n", contentType)
 	}
-	debugf("Requesting URL '%s'\n", r.URL)
+	debugf("Requesting URL %q\n", r.URL)
 
 	return t.rt.RoundTrip(r)
 }
@@ -143,7 +143,7 @@ func (plx *Playlistx) AddVideoToPlaylist(service *youtube.Service, videoID strin
 	// create playlist if it doesn't exist
 	if playlist == nil {
 		if plx.Id != "" {
-			return fmt.Errorf("playlist ID '%s' doesn't exist", plx.Id)
+			return fmt.Errorf("playlist ID %q doesn't exist", plx.Id)
 		}
 		playlist = &youtube.Playlist{}
 		playlist.Snippet = &youtube.PlaylistSnippet{Title: plx.Title}
@@ -152,7 +152,7 @@ func (plx *Playlistx) AddVideoToPlaylist(service *youtube.Service, videoID strin
 		// API doesn't return playlist ID here!?
 		playlist, err = insertCall.Do()
 		if err != nil {
-			return fmt.Errorf("error creating playlist with title '%s': %s", plx.Title, err)
+			return fmt.Errorf("error creating playlist with title %q: %s", plx.Title, err)
 		}
 	}
 
@@ -169,7 +169,7 @@ func (plx *Playlistx) AddVideoToPlaylist(service *youtube.Service, videoID strin
 		return err
 	}
 
-	fmt.Printf("Video added to playlist '%s' (%s)\n", playlist.Snippet.Title, playlist.Id)
+	fmt.Printf("Video added to playlist %q (%s)\n", playlist.Snippet.Title, playlist.Id)
 
 	return nil
 }

@@ -197,11 +197,10 @@ func buildOAuthHTTPClient(ctx context.Context, scopes []string) (*http.Client, e
 	// the state query parameter on your redirect callback
 	randState := fmt.Sprintf("st%d", time.Now().UnixNano())
 
-	callbackCh := make(chan CallbackStatus)
 	// Start web server.
 	// This is how this program receives the authorization code
 	// when the browser redirects.
-	callbackCh, err = startWebServer()
+	callbackCh, err := startWebServer()
 	if err != nil {
 		return nil, err
 	}
@@ -223,7 +222,7 @@ func buildOAuthHTTPClient(ctx context.Context, scopes []string) (*http.Client, e
 	cbs = <-callbackCh
 
 	if cbs.state != randState {
-		return nil, fmt.Errorf("expecting state '%s', received state '%s'", randState, cbs.state)
+		return nil, fmt.Errorf("expecting state %q, received state %q", randState, cbs.state)
 	}
 
 	token, err = config.Exchange(context.TODO(), cbs.code)

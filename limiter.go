@@ -37,9 +37,8 @@ type limitChecker struct {
 }
 
 type monitor struct {
-	lastRead time.Time
-	start    time.Time
-	size     int64
+	start time.Time
+	size  int64
 
 	status status
 }
