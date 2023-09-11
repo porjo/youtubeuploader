@@ -20,6 +20,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io/fs"
 	"net"
 	"net/http"
 	"os"
@@ -43,8 +44,7 @@ with information from the {{ Google Cloud Console }}
 {{ https://cloud.google.com/console }}
 
 For more information about the client_secrets.json file format, please visit:
-https://developers.google.com/api-client-library/python/guide/aaa_client_secrets
-`
+https://developers.google.com/api-client-library/python/guide/aaa_client_secrets`
 
 var (
 	clientSecretsFile = flag.String("secrets", "client_secrets.json", "Client Secrets configuration")
@@ -90,14 +90,14 @@ func readConfig(scopes []string) (*oauth2.Config, error) {
 	// Read the secrets file
 	data, err := os.ReadFile(*clientSecretsFile)
 	if err != nil {
-		// If file doesn't exist fallback to reading from OS specific default config dir
-		if os.IsNotExist(err) {
+		// fallback to reading from OS specific default config dir
+		if errors.Is(err, fs.ErrNotExist) {
 			confDir, err := os.UserConfigDir()
 			if err != nil {
 				return nil, err
 			}
 			fullPath := filepath.Join(confDir, "youtubeuploader", "client_secrets.json")
-			debugf("Reading client secrets from '%v'\n", fullPath)
+			debugf("Reading client secrets from %q\n", fullPath)
 			data, err = os.ReadFile(fullPath)
 			if err != nil {
 				return nil, fmt.Errorf(missingClientSecretsMessage, fullPath)
@@ -182,6 +182,22 @@ func buildOAuthHTTPClient(ctx context.Context, scopes []string) (*http.Client, e
 	if err != nil {
 		msg := fmt.Sprintf("Cannot read configuration file: %v", err)
 		return nil, errors.New(msg)
+	}
+
+	// Check if supplied token cache file exists
+	// fallback to reading from OS specific default config dir
+	_, err = os.Stat(*cache)
+	if err != nil && errors.Is(err, fs.ErrNotExist) {
+		confDir, err := os.UserConfigDir()
+		if err != nil {
+			return nil, err
+		}
+		cachePath := filepath.Join(confDir, "youtubeuploader", "request.token")
+		_, err = os.Stat(cachePath)
+		if err == nil {
+			debugf("Reading token from cache file %q\n", cachePath)
+			*cache = cachePath
+		}
 	}
 
 	// Try to read the token from the cache file.
