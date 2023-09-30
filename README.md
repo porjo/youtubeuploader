@@ -24,7 +24,7 @@ Talking to the Youtube API requires oauth2 authentication. As such, you must:
    - Add an 'Authorized redirect URI' of 'http://localhost:8080/oauth2callback'
 1. Download the client secrets JSON file (click download icon next to newly created client ID) and save it as file `client_secrets.json` in the same directory as the utility e.g.
 
-```
+```json
 {
   "web": {
     "client_id": "xxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com",
@@ -40,11 +40,13 @@ Talking to the Youtube API requires oauth2 authentication. As such, you must:
 }
 ```
 
-**NOTE** Google will apply 'private' status on videos uploaded to newly created projects - from [Google's Announcement](https://developers.google.com/youtube/v3/revision_history#july-28,-2020):
+**NOTE 1** Google will apply 'private' status on videos uploaded to newly created projects - from [Google's Announcement](https://developers.google.com/youtube/v3/revision_history#july-28,-2020):
 
 > All videos uploaded via the videos.insert endpoint from unverified API projects created after 28 July 2020 will be restricted to private viewing mode. To lift this restriction, each project must undergo an audit to verify compliance with the Terms of Service.
 
 See [Issue #86](https://github.com/porjo/youtubeuploader/issues/86) for more information.
+
+**NOTE 2** By default, you will only be able to upload 5-6 videos every 24 hours due to quota restrictions. See [Issue #119](https://github.com/porjo/youtubeuploader/issues/119) for more information.
 
 ## Usage
 
