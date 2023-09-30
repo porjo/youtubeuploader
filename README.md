@@ -46,7 +46,7 @@ Talking to the Youtube API requires oauth2 authentication. As such, you must:
 
 See [Issue #86](https://github.com/porjo/youtubeuploader/issues/86) for more information.
 
-**NOTE 2** By default, you will only be able to upload 5-6 videos every 24 hours due to quota restrictions. See [Issue #119](https://github.com/porjo/youtubeuploader/issues/119) for more information.
+**NOTE 2** By default you will only be able to upload ~6 videos every 24 hours due to quota restrictions set by Google. See [Issue #119](https://github.com/porjo/youtubeuploader/issues/119) for more information.
 
 ## Usage
 
