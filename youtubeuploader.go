@@ -32,8 +32,6 @@ import (
 	"google.golang.org/api/youtube/v3"
 )
 
-type chanChan chan chan struct{}
-
 var (
 	filename          = flag.String("filename", "", "video filename. Can be a URL. Read from stdin with '-'")
 	thumbnail         = flag.String("thumbnail", "", "thumbnail filename. Can be a URL")
@@ -116,7 +114,9 @@ func main() {
 		defer captionReader.Close()
 	}
 
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	transport := &limitTransport{rt: http.DefaultTransport, lr: limitRange, filesize: filesize}
 	ctx = context.WithValue(ctx, oauth2.HTTPClient, &http.Client{
 		Transport: transport,
@@ -125,8 +125,7 @@ func main() {
 	p := &Progress{Quiet: *quiet, Transport: transport, Filesize: filesize}
 	signalChan := make(chan os.Signal, 1)
 	SetSignalNotify(signalChan)
-	quitChan := make(chanChan)
-	go p.Progress(quitChan, signalChan)
+	go p.Progress(ctx, signalChan)
 
 	client, err := buildOAuthHTTPClient(ctx, []string{youtube.YoutubeUploadScope, youtube.YoutubepartnerScope, youtube.YoutubeScope})
 	if err != nil {
@@ -167,12 +166,6 @@ func main() {
 		call.Header().Set("Slug", filetitle)
 	}
 	video, err = call.NotifySubscribers(*notifySubscribers).Media(reader, option).Do()
-
-	quit := make(chan struct{})
-	quitChan <- quit
-	// wait here until quit gets closed
-	<-quit
-
 	if err != nil {
 		if video != nil {
 			log.Fatalf("Error making YouTube API call: %v, %v", err, video.HTTPStatusCode)
@@ -180,7 +173,7 @@ func main() {
 			log.Fatalf("Error making YouTube API call: %v", err)
 		}
 	}
-	fmt.Printf("Upload successful! Video ID: %v\n", video.Id)
+	fmt.Printf("\nUpload successful! Video ID: %v\n", video.Id)
 
 	if *metaJSONout != "" {
 		JSONOut, _ := json.Marshal(video)
@@ -250,6 +243,6 @@ func main() {
 
 func debugf(format string, args ...interface{}) {
 	if *debug {
-		fmt.Printf("[DEBUG] "+format, args...)
+		log.Printf("[DEBUG] "+format, args...)
 	}
 }

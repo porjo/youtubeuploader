@@ -15,6 +15,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -29,7 +30,7 @@ type Progress struct {
 	erase int
 }
 
-func (p *Progress) Progress(quitChan chanChan, signalChan chan os.Signal) {
+func (p *Progress) Progress(ctx context.Context, signalChan chan os.Signal) {
 	ticker := time.Tick(time.Second)
 	for {
 		select {
@@ -39,10 +40,7 @@ func (p *Progress) Progress(quitChan chanChan, signalChan chan os.Signal) {
 			}
 		case <-signalChan:
 			p.progressOut()
-		case ch := <-quitChan:
-			// final newline
-			fmt.Println()
-			close(ch)
+		case <-ctx.Done():
 			return
 		}
 	}

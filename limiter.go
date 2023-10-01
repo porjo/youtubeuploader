@@ -30,9 +30,10 @@ type limitRange struct {
 }
 
 type limitChecker struct {
+	io.ReadCloser
+
 	lr      limitRange
-	reader  io.ReadCloser
-	rl      *rate.Limiter
+	limiter *rate.Limiter
 	Monitor monitor
 }
 
@@ -53,7 +54,10 @@ type status struct {
 const bucketSize = 1000
 
 func NewLimitChecker(lr limitRange, r io.ReadCloser) *limitChecker {
-	lc := &limitChecker{lr: lr, reader: r}
+	lc := &limitChecker{
+		lr:         lr,
+		ReadCloser: r,
+	}
 	return lc
 }
 
@@ -73,8 +77,8 @@ func (lc *limitChecker) Read(p []byte) (int, error) {
 	}
 
 	if *rateLimit > 0 {
-		if lc.rl == nil {
-			lc.rl = rate.NewLimiter(rate.Limit(*rateLimit*125), bucketSize)
+		if lc.limiter == nil {
+			lc.limiter = rate.NewLimiter(rate.Limit(*rateLimit*125), bucketSize)
 		}
 
 		if lc.lr.start.IsZero() || lc.lr.end.IsZero() {
@@ -105,12 +109,12 @@ func (lc *limitChecker) Read(p []byte) (int, error) {
 		for {
 			var readL int
 
-			err = lc.rl.WaitN(context.Background(), tokens)
+			err = lc.limiter.WaitN(context.Background(), tokens)
 			if err != nil {
 				break
 			}
 
-			readL, err = lc.reader.Read(p[read : read+tokens])
+			readL, err = lc.ReadCloser.Read(p[read : read+tokens])
 			read += readL
 
 			if err != nil {
@@ -125,7 +129,7 @@ func (lc *limitChecker) Read(p []byte) (int, error) {
 			}
 		}
 	} else {
-		read, err = lc.reader.Read(p)
+		read, err = lc.ReadCloser.Read(p)
 	}
 
 	lc.Monitor.status.Bytes += int64(read)
@@ -141,7 +145,7 @@ func (lc *limitChecker) Read(p []byte) (int, error) {
 }
 
 func (lc *limitChecker) Close() error {
-	return nil
+	return lc.ReadCloser.Close()
 }
 
 func parseLimitBetween(between string) (limitRange, error) {
