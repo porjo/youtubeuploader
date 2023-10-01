@@ -12,7 +12,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package youtubeuploader
 
 import (
 	"context"
@@ -21,18 +21,18 @@ import (
 	"flag"
 	"fmt"
 	"io/fs"
-	"net"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
 	"time"
 
 	"github.com/pkg/browser"
 	"golang.org/x/oauth2"
 )
 
-const missingClientSecretsMessage = `
+const (
+	missingClientSecretsMessage = `
 Please configure OAuth 2.0
 
 To make this sample run, you need to populate the client_secrets.json file
@@ -45,6 +45,9 @@ with information from the {{ Google Cloud Console }}
 
 For more information about the client_secrets.json file format, please visit:
 https://developers.google.com/api-client-library/python/guide/aaa_client_secrets`
+
+	callbackTimeout = 120 * time.Second
+)
 
 var (
 	clientSecretsFile = flag.String("secrets", "client_secrets.json", "Client Secrets configuration")
@@ -67,9 +70,9 @@ type Cache interface {
 // the Token is stored in JSON format.
 type CacheFile string
 
-// ClientConfig is a data structure definition for the client_secrets.json file.
+// oAuthClientConfig is a data structure definition for the client_secrets.json file.
 // The code unmarshals the JSON configuration file into this structure.
-type ClientConfig struct {
+type oAuthClientConfig struct {
 	ClientID     string   `json:"client_id"`
 	ClientSecret string   `json:"client_secret"`
 	RedirectURIs []string `json:"redirect_uris"`
@@ -77,10 +80,10 @@ type ClientConfig struct {
 	TokenURI     string   `json:"token_uri"`
 }
 
-// Config is a root-level configuration object.
-type Config struct {
-	Installed ClientConfig `json:"installed"`
-	Web       ClientConfig `json:"web"`
+// oAuthRootConfig is a root-level configuration object.
+type oAuthRootConfig struct {
+	Installed oAuthClientConfig `json:"installed"`
+	Web       oAuthClientConfig `json:"web"`
 }
 
 // readConfig reads the configuration from clientSecretsFile.
@@ -97,7 +100,8 @@ func readConfig(scopes []string) (*oauth2.Config, error) {
 				return nil, err
 			}
 			fullPath := filepath.Join(confDir, "youtubeuploader", "client_secrets.json")
-			debugf("Reading client secrets from %q\n", fullPath)
+			// TODO debug log
+			//logger.Debugf("Reading client secrets from %q\n", fullPath)
 			data, err = os.ReadFile(fullPath)
 			if err != nil {
 				return nil, fmt.Errorf(missingClientSecretsMessage, fullPath)
@@ -109,7 +113,7 @@ func readConfig(scopes []string) (*oauth2.Config, error) {
 		}
 	}
 
-	cfg1 := new(Config)
+	cfg1 := new(oAuthRootConfig)
 	err = json.Unmarshal(data, &cfg1)
 	if err != nil {
 		return nil, err
@@ -117,7 +121,7 @@ func readConfig(scopes []string) (*oauth2.Config, error) {
 
 	var oCfg *oauth2.Config
 
-	var cfg2 ClientConfig
+	var cfg2 oAuthClientConfig
 	if cfg1.Web.ClientID != "" {
 		cfg2 = cfg1.Web
 	} else if cfg1.Installed.ClientID != "" {
@@ -147,15 +151,20 @@ func readConfig(scopes []string) (*oauth2.Config, error) {
 	return oCfg, nil
 }
 
-// startWebServer starts a web server that listens on http://localhost:8080.
+// startCallbackWebServer starts a web server that listens on http://localhost:8080.
 // The webserver waits for an oauth code in the three-legged auth flow.
-func startWebServer() (callbackCh chan CallbackStatus, err error) {
-	listener, err := net.Listen("tcp", ":"+strconv.Itoa(*oAuthPort))
-	if err != nil {
-		return nil, err
-	}
-	callbackCh = make(chan CallbackStatus)
-	go http.Serve(listener, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func startCallbackWebServer(oAuthPort int) (callbackCh chan CallbackStatus, err error) {
+	ctx, cancel := context.WithTimeout(context.Background(), callbackTimeout)
+	defer cancel()
+
+	quitChan := make(chan struct{})
+	defer close(quitChan)
+
+	var srv http.Server
+
+	srv.Addr = fmt.Sprintf(":%d", oAuthPort)
+
+	srv.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		code := r.FormValue("code")
 		state := r.FormValue("state")
 		if code != "" && state != "" {
@@ -163,21 +172,49 @@ func startWebServer() (callbackCh chan CallbackStatus, err error) {
 			cbs.state = r.FormValue("state")
 			cbs.code = r.FormValue("code")
 			callbackCh <- cbs // send code to OAuth flow
-			listener.Close()
-			w.Header().Set("Content-Type", "text/plain")
 			fmt.Fprintf(w, "Received code: %v\r\nYou can now safely close this browser window.", cbs.code)
+			if f, ok := w.(http.Flusher); ok {
+				f.Flush()
+			}
+			err := srv.Shutdown(ctx)
+			if err != nil {
+				log.Printf("Callback server shutdown error: %s\n", err)
+			}
 		}
-	}))
+	})
+
+	callbackCh = make(chan CallbackStatus)
+
+	// shutdown server on context timeout
+	go func() {
+		select {
+		case <-ctx.Done():
+			log.Printf("Timed out waiting for request to callback server: http://localhost:%d\n", oAuthPort)
+			err := srv.Shutdown(ctx)
+			if err != nil {
+				log.Printf("Callback server shutdown error: %s\n", err)
+			}
+		case <-quitChan:
+			return
+		}
+	}()
+
+	go func() {
+		defer close(callbackCh)
+		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+			log.Printf("Callback server error: %s\n", err)
+		}
+	}()
 
 	return callbackCh, nil
 }
 
-// buildOAuthHTTPClient takes the user through the three-legged OAuth flow.
+// BuildOAuthHTTPClient takes the user through the three-legged OAuth flow.
 // It opens a browser in the native OS or outputs a URL, then blocks until
 // the redirect completes to the /oauth2callback URI.
 // It returns an instance of an HTTP client that can be passed to the
 // constructor of the YouTube client.
-func buildOAuthHTTPClient(ctx context.Context, scopes []string) (*http.Client, error) {
+func BuildOAuthHTTPClient(ctx context.Context, scopes []string, oAuthPort int) (*http.Client, error) {
 	config, err := readConfig(scopes)
 	if err != nil {
 		msg := fmt.Sprintf("Cannot read configuration file: %v", err)
@@ -195,7 +232,8 @@ func buildOAuthHTTPClient(ctx context.Context, scopes []string) (*http.Client, e
 		cachePath := filepath.Join(confDir, "youtubeuploader", "request.token")
 		_, err = os.Stat(cachePath)
 		if err == nil {
-			debugf("Reading token from cache file %q\n", cachePath)
+			// TODO debug log
+			//logger.Debugf("Reading token from cache file %q\n", cachePath)
 			*cache = cachePath
 		}
 	}
@@ -216,7 +254,7 @@ func buildOAuthHTTPClient(ctx context.Context, scopes []string) (*http.Client, e
 	// Start web server.
 	// This is how this program receives the authorization code
 	// when the browser redirects.
-	callbackCh, err := startWebServer()
+	callbackCh, err := startCallbackWebServer(oAuthPort)
 	if err != nil {
 		return nil, err
 	}

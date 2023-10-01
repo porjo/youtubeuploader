@@ -4,10 +4,12 @@ before:
   hooks:
     # You may remove this if you don't use go modules.
     - go mod tidy
-    - bash check_tag.sh {{.Version}}
+    # TODO how to verify signed tags without needing to install public key?
+    #- git tag -v {{.Version}}
 builds:
   - env:
     - CGO_ENABLED=0
+    main: ./cmd/youtubeuploader
     ldflags:
       - -X main.appVersion={{.Version}}
     targets:
@@ -22,13 +24,13 @@ builds:
       - openbsd_amd64
 archives:
   -
-    replacements:
-      darwin: Darwin
-      linux: Linux
-      windows: Windows
-      amd64: x86_64
-      freebsd: FreeBSD
-      openbsd: OpenBSD
+    name_template: >-
+      {{- .ProjectName }}_
+      {{- .Version }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end -}}
     format_overrides:
       - goos: windows
         format: zip

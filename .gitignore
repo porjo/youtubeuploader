@@ -1,5 +1,7 @@
 *.json
+!test/*.json
 *.token
+!test/*.token
 *.mp4
 *.avi
 *.mkv
@@ -9,4 +11,5 @@
 .*.swp
 vendor
 youtubeuploader
+!cmd/youtubeuploader/
 dist/

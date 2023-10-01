@@ -1,5 +1,3 @@
-//go:build windows
-
 /*
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,12 +12,20 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package youtubeuploader
+package utils
 
-import (
-	"os"
-)
+import "log"
 
-func SetSignalNotify(c chan os.Signal) {
-	// do nothing on Windows
+type Logger struct {
+	debug bool
+}
+
+func NewLogger(debug bool) Logger {
+	return Logger{debug: debug}
+}
+
+func (l *Logger) Debugf(format string, args ...interface{}) {
+	if l.debug {
+		log.Printf("[DEBUG] "+format, args...)
+	}
 }
