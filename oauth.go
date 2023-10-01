@@ -21,18 +21,18 @@ import (
 	"flag"
 	"fmt"
 	"io/fs"
-	"net"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
 	"time"
 
 	"github.com/pkg/browser"
 	"golang.org/x/oauth2"
 )
 
-const missingClientSecretsMessage = `
+const (
+	missingClientSecretsMessage = `
 Please configure OAuth 2.0
 
 To make this sample run, you need to populate the client_secrets.json file
@@ -45,6 +45,9 @@ with information from the {{ Google Cloud Console }}
 
 For more information about the client_secrets.json file format, please visit:
 https://developers.google.com/api-client-library/python/guide/aaa_client_secrets`
+
+	callbackTimeout = 120 * time.Second
+)
 
 var (
 	clientSecretsFile = flag.String("secrets", "client_secrets.json", "Client Secrets configuration")
@@ -147,15 +150,19 @@ func readConfig(scopes []string) (*oauth2.Config, error) {
 	return oCfg, nil
 }
 
-// startWebServer starts a web server that listens on http://localhost:8080.
+// startCallbackWebServer starts a web server that listens on http://localhost:8080.
 // The webserver waits for an oauth code in the three-legged auth flow.
-func startWebServer() (callbackCh chan CallbackStatus, err error) {
-	listener, err := net.Listen("tcp", ":"+strconv.Itoa(*oAuthPort))
-	if err != nil {
-		return nil, err
-	}
-	callbackCh = make(chan CallbackStatus)
-	go http.Serve(listener, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func startCallbackWebServer() (callbackCh chan CallbackStatus, err error) {
+	ctx, _ := context.WithTimeout(context.Background(), callbackTimeout)
+
+	quitChan := make(chan struct{})
+	defer close(quitChan)
+
+	var srv http.Server
+
+	srv.Addr = fmt.Sprintf(":%d", *oAuthPort)
+
+	srv.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		code := r.FormValue("code")
 		state := r.FormValue("state")
 		if code != "" && state != "" {
@@ -163,11 +170,39 @@ func startWebServer() (callbackCh chan CallbackStatus, err error) {
 			cbs.state = r.FormValue("state")
 			cbs.code = r.FormValue("code")
 			callbackCh <- cbs // send code to OAuth flow
-			listener.Close()
-			w.Header().Set("Content-Type", "text/plain")
 			fmt.Fprintf(w, "Received code: %v\r\nYou can now safely close this browser window.", cbs.code)
+			if f, ok := w.(http.Flusher); ok {
+				f.Flush()
+			}
+			err := srv.Shutdown(ctx)
+			if err != nil {
+				log.Printf("Callback server shutdown error: %s\n", err)
+			}
 		}
-	}))
+	})
+
+	callbackCh = make(chan CallbackStatus)
+
+	// shutdown server on context timeout
+	go func() {
+		select {
+		case <-ctx.Done():
+			log.Printf("Timed out waiting for request to callback server: http://localhost:%d\n", *oAuthPort)
+			err := srv.Shutdown(ctx)
+			if err != nil {
+				log.Printf("Callback server shutdown error: %s\n", err)
+			}
+		case <-quitChan:
+			return
+		}
+	}()
+
+	go func() {
+		defer close(callbackCh)
+		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+			log.Printf("Callback server error: %s\n", err)
+		}
+	}()
 
 	return callbackCh, nil
 }
@@ -216,7 +251,7 @@ func buildOAuthHTTPClient(ctx context.Context, scopes []string) (*http.Client, e
 	// Start web server.
 	// This is how this program receives the authorization code
 	// when the browser redirects.
-	callbackCh, err := startWebServer()
+	callbackCh, err := startCallbackWebServer()
 	if err != nil {
 		return nil, err
 	}
