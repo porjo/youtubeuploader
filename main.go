@@ -61,6 +61,8 @@ var (
 func main() {
 	flag.Parse()
 
+	debugf("Youtubeuploader version: %s\n", appVersion)
+
 	if *showAppVersion {
 		fmt.Printf("Youtubeuploader version: %s\n", appVersion)
 		os.Exit(0)
