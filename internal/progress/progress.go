@@ -12,7 +12,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package progress
 
 import (
 	"context"
@@ -20,14 +20,22 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/porjo/youtubeuploader/internal/limiter"
 )
 
 type Progress struct {
-	Transport *limitTransport
+	transport *limiter.LimitTransport
 	Filesize  int64
 	Quiet     bool
 
 	erase int
+}
+
+func NewProgress(transport *limiter.LimitTransport) *Progress {
+	return &Progress{
+		transport: transport,
+	}
 }
 
 func (p *Progress) Progress(ctx context.Context, signalChan chan os.Signal) {
@@ -47,21 +55,19 @@ func (p *Progress) Progress(ctx context.Context, signalChan chan os.Signal) {
 }
 
 func (p *Progress) progressOut() {
-	if p.Transport.reader != nil {
-		s := p.Transport.reader.Monitor.Status()
-		avgRate := float64(s.AvgRate)
-		var status string
-		if avgRate >= 125000 {
-			status = fmt.Sprintf("Progress: %8.2f Mbps, %d / %d (%s) ETA %8s", avgRate/125000, s.Bytes, p.Filesize, s.Progress, s.TimeRem)
-		} else {
-			status = fmt.Sprintf("Progress: %8.2f Kbps, %d / %d (%s) ETA %8s", avgRate/125, s.Bytes, p.Filesize, s.Progress, s.TimeRem)
-		}
-		if p.Quiet {
-			fmt.Printf("%s\n", status)
-		} else {
-			// erase to start of line, then output status
-			fmt.Printf("\r%s\r%s", strings.Repeat(" ", p.erase), status)
-			p.erase = len(status)
-		}
+	s := p.transport.GetMonitorStatus()
+	avgRate := float64(s.AvgRate)
+	var status string
+	if avgRate >= 125000 {
+		status = fmt.Sprintf("Progress: %8.2f Mbps, %d / %d (%s) ETA %8s", avgRate/125000, s.Bytes, p.Filesize, s.Progress, s.TimeRem)
+	} else {
+		status = fmt.Sprintf("Progress: %8.2f Kbps, %d / %d (%s) ETA %8s", avgRate/125, s.Bytes, p.Filesize, s.Progress, s.TimeRem)
+	}
+	if p.Quiet {
+		fmt.Printf("%s\n", status)
+	} else {
+		// erase to start of line, then output status
+		fmt.Printf("\r%s\r%s", strings.Repeat(" ", p.erase), status)
+		p.erase = len(status)
 	}
 }

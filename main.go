@@ -26,11 +26,16 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/porjo/youtubeuploader/internal/limiter"
+	"github.com/porjo/youtubeuploader/internal/progress"
+	"github.com/porjo/youtubeuploader/internal/utils"
 	"golang.org/x/oauth2"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option"
 	"google.golang.org/api/youtube/v3"
 )
+
+const inputTimeLayout = "15:04"
 
 var (
 	filename          = flag.String("filename", "", "video filename. Can be a URL. Read from stdin with '-'")
@@ -56,12 +61,16 @@ var (
 
 	// this is set by compile-time to match git tag
 	appVersion string = "unknown"
+
+	logger utils.Logger
 )
 
 func main() {
 	flag.Parse()
 
-	debugf("Youtubeuploader version: %s\n", appVersion)
+	logger = utils.NewLogger(*debug)
+
+	logger.Debugf("Youtubeuploader version: %s\n", appVersion)
 
 	if *showAppVersion {
 		fmt.Printf("Youtubeuploader version: %s\n", appVersion)
@@ -83,9 +92,9 @@ func main() {
 	var filesize int64
 	var err error
 
-	var limitRange limitRange
+	var limitRange limiter.LimitRange
 	if *limitBetween != "" {
-		limitRange, err = parseLimitBetween(*limitBetween)
+		limitRange, err = limiter.ParseLimitBetween(*limitBetween, inputTimeLayout)
 		if err != nil {
 			fmt.Printf("Invalid value for -limitBetween: %v", err)
 			os.Exit(1)
@@ -119,12 +128,15 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	transport := &limitTransport{rt: http.DefaultTransport, lr: limitRange, filesize: filesize}
+	transport := limiter.NewLimitTransport(logger, http.DefaultTransport, limitRange, filesize, *rateLimit)
 	ctx = context.WithValue(ctx, oauth2.HTTPClient, &http.Client{
 		Transport: transport,
 	})
 
-	p := &Progress{Quiet: *quiet, Transport: transport, Filesize: filesize}
+	p := progress.NewProgress(transport)
+	p.Quiet = *quiet
+	p.Filesize = filesize
+
 	signalChan := make(chan os.Signal, 1)
 	SetSignalNotify(signalChan)
 	go p.Progress(ctx, signalChan)
@@ -164,7 +176,7 @@ func main() {
 	call := service.Videos.Insert([]string{"snippet", "status", "recordingDetails"}, upload)
 	if *sendFileName && *filename != "" && *filename != "-" {
 		filetitle := filepath.Base(*filename)
-		debugf("Adding file name to request: %q\n", filetitle)
+		logger.Debugf("Adding file name to request: %q\n", filetitle)
 		call.Header().Set("Slug", filetitle)
 	}
 	video, err = call.NotifySubscribers(*notifySubscribers).Media(reader, option).Do()
@@ -240,11 +252,5 @@ func main() {
 				log.Fatalf("Error adding video to playlist: %s", err)
 			}
 		}
-	}
-}
-
-func debugf(format string, args ...interface{}) {
-	if *debug {
-		log.Printf("[DEBUG] "+format, args...)
 	}
 }

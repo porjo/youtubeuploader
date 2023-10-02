@@ -12,70 +12,84 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package limiter
 
 import (
 	"context"
 	"fmt"
 	"io"
+	"net/http"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/porjo/youtubeuploader/internal/utils"
 	"golang.org/x/time/rate"
 )
 
-type limitRange struct {
+const bucketSize = 1000
+
+type LimitTransport struct {
+	rt         http.RoundTripper
+	lr         LimitRange
+	reader     *LimitChecker
+	readerLock sync.Mutex
+	filesize   int64
+	rateLimit  int
+
+	logger utils.Logger
+}
+
+type LimitRange struct {
 	start time.Time
 	end   time.Time
 }
 
-type limitChecker struct {
-	sync.Mutex
-
+type LimitChecker struct {
 	io.ReadCloser
 
-	lr      limitRange
-	limiter *rate.Limiter
-	Monitor *monitor
+	lr        LimitRange
+	limiter   *rate.Limiter
+	Monitor   *Monitor
+	rateLimit int
 }
 
-type monitor struct {
+type Monitor struct {
 	sync.Mutex
 
 	start time.Time
-	size  int64
+	Size  int64
 
-	status status
+	status Status
 }
 
-type status struct {
+type Status struct {
 	AvgRate  int64
 	Bytes    int64
 	TimeRem  time.Duration
 	Progress string
 }
 
-const bucketSize = 1000
+func (m *Monitor) Status() Status {
+	m.Lock()
+	defer m.Unlock()
+	return m.status
+}
 
-func NewLimitChecker(lr limitRange, r io.ReadCloser) *limitChecker {
-	lc := &limitChecker{
+func NewLimitChecker(lr LimitRange, r io.ReadCloser, rateLimit int) *LimitChecker {
+	lc := &LimitChecker{
 		lr:         lr,
 		ReadCloser: r,
+		Monitor:    &Monitor{},
+		rateLimit:  rateLimit,
 	}
 	return lc
 }
 
-func (m *monitor) Status() status {
-	//	m.Lock()
-	//defer m.Unlock()
-	return m.status
-}
+func (lc *LimitChecker) Read(p []byte) (int, error) {
 
-func (lc *limitChecker) Read(p []byte) (int, error) {
-
-	//	lc.Monitor.Lock()
-	//defer lc.Monitor.Unlock()
+	lc.Monitor.Lock()
+	defer lc.Monitor.Unlock()
 
 	var err error
 	var read int
@@ -86,9 +100,9 @@ func (lc *limitChecker) Read(p []byte) (int, error) {
 		lc.Monitor.start = time.Now()
 	}
 
-	if *rateLimit > 0 {
+	if lc.rateLimit > 0 {
 		if lc.limiter == nil {
-			lc.limiter = rate.NewLimiter(rate.Limit(*rateLimit*125), bucketSize)
+			lc.limiter = rate.NewLimiter(rate.Limit(lc.rateLimit*125), bucketSize)
 		}
 
 		if lc.lr.start.IsZero() || lc.lr.end.IsZero() {
@@ -144,22 +158,22 @@ func (lc *limitChecker) Read(p []byte) (int, error) {
 
 	lc.Monitor.status.Bytes += int64(read)
 	// bytes read will be greater than filesize due to HTTP headers etc, so reset to filesize
-	if lc.Monitor.status.Bytes > lc.Monitor.size {
-		lc.Monitor.status.Bytes = lc.Monitor.size
+	if lc.Monitor.status.Bytes > lc.Monitor.Size {
+		lc.Monitor.status.Bytes = lc.Monitor.Size
 	}
-	lc.Monitor.status.Progress = fmt.Sprintf("%.1f%%", float64(lc.Monitor.status.Bytes)/float64(lc.Monitor.size)*100)
+	lc.Monitor.status.Progress = fmt.Sprintf("%.1f%%", float64(lc.Monitor.status.Bytes)/float64(lc.Monitor.Size)*100)
 	lc.Monitor.status.AvgRate = int64(float64(lc.Monitor.status.Bytes) / time.Since(lc.Monitor.start).Seconds())
-	lc.Monitor.status.TimeRem = time.Duration(float64(lc.Monitor.size-lc.Monitor.status.Bytes)/float64(lc.Monitor.status.AvgRate)) * time.Second
+	lc.Monitor.status.TimeRem = time.Duration(float64(lc.Monitor.Size-lc.Monitor.status.Bytes)/float64(lc.Monitor.status.AvgRate)) * time.Second
 
 	return read, err
 }
 
-func (lc *limitChecker) Close() error {
+func (lc *LimitChecker) Close() error {
 	return lc.ReadCloser.Close()
 }
 
-func parseLimitBetween(between string) (limitRange, error) {
-	var lr limitRange
+func ParseLimitBetween(between, inputTimeLayout string) (LimitRange, error) {
+	var lr LimitRange
 	var err error
 	var start, end time.Time
 	parts := strings.Split(between, "-")
@@ -187,4 +201,56 @@ func parseLimitBetween(between string) (limitRange, error) {
 	}
 
 	return lr, nil
+}
+
+func NewLimitTransport(logger utils.Logger, rt http.RoundTripper, lr LimitRange, filesize int64, ratelimit int) *LimitTransport {
+
+	return &LimitTransport{logger: logger, rt: rt, lr: lr, filesize: filesize, rateLimit: ratelimit}
+}
+
+func (t *LimitTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+
+	contentType := r.Header.Get("Content-Type")
+
+	// FIXME: this is messy. Need a better way to detect rountrip associated with video upload
+	if strings.HasPrefix(contentType, "multipart/related") ||
+		strings.HasPrefix(contentType, "video") ||
+		strings.HasPrefix(contentType, "application/octet-stream") ||
+		r.Header.Get("X-Upload-Content-Type") == "application/octet-stream" {
+
+		var monitor *Monitor
+
+		t.readerLock.Lock()
+		if t.reader != nil {
+			t.reader.Monitor.Lock()
+			monitor = t.reader.Monitor
+			t.reader.Monitor.Unlock()
+		}
+
+		t.reader = NewLimitChecker(t.lr, r.Body, t.rateLimit)
+
+		t.reader.Monitor.Lock()
+		if monitor != nil {
+			t.reader.Monitor = monitor
+		} else {
+			t.reader.Monitor.Size = t.filesize
+		}
+		t.reader.Monitor.Unlock()
+
+		r.Body = t.reader
+		t.readerLock.Unlock()
+	}
+
+	if contentType != "" {
+		t.logger.Debugf("Content-Type header value %q\n", contentType)
+	}
+	t.logger.Debugf("Requesting URL %q\n", r.URL)
+
+	return t.rt.RoundTrip(r)
+}
+
+func (t *LimitTransport) GetMonitorStatus() Status {
+	t.readerLock.Lock()
+	defer t.readerLock.Unlock()
+	return t.reader.Monitor.Status()
 }

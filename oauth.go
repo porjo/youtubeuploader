@@ -100,7 +100,7 @@ func readConfig(scopes []string) (*oauth2.Config, error) {
 				return nil, err
 			}
 			fullPath := filepath.Join(confDir, "youtubeuploader", "client_secrets.json")
-			debugf("Reading client secrets from %q\n", fullPath)
+			logger.Debugf("Reading client secrets from %q\n", fullPath)
 			data, err = os.ReadFile(fullPath)
 			if err != nil {
 				return nil, fmt.Errorf(missingClientSecretsMessage, fullPath)
@@ -230,7 +230,7 @@ func buildOAuthHTTPClient(ctx context.Context, scopes []string) (*http.Client, e
 		cachePath := filepath.Join(confDir, "youtubeuploader", "request.token")
 		_, err = os.Stat(cachePath)
 		if err == nil {
-			debugf("Reading token from cache file %q\n", cachePath)
+			logger.Debugf("Reading token from cache file %q\n", cachePath)
 			*cache = cachePath
 		}
 	}
