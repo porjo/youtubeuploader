@@ -65,6 +65,7 @@ type VideoMeta struct {
 }
 
 func (t *limitTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+
 	contentType := r.Header.Get("Content-Type")
 
 	// FIXME: this is messy. Need a better way to detect rountrip associated with video upload
@@ -75,19 +76,23 @@ func (t *limitTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 
 		var monitor *monitor
 
+		t.reader.Lock()
 		if t.reader != nil {
-			monitor = &t.reader.Monitor
+			monitor = t.reader.Monitor
 		}
 
 		t.reader = NewLimitChecker(t.lr, r.Body)
 
+		t.reader.Monitor.Lock()
 		if monitor != nil {
-			t.reader.Monitor = *monitor
+			t.reader.Monitor = monitor
 		} else {
 			t.reader.Monitor.size = t.filesize
 		}
+		t.reader.Monitor.Unlock()
 
 		r.Body = t.reader
+		t.reader.Unlock()
 	}
 
 	if contentType != "" {

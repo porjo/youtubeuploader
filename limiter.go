@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sync"
 	"time"
 
 	"golang.org/x/time/rate"
@@ -30,14 +31,18 @@ type limitRange struct {
 }
 
 type limitChecker struct {
+	sync.Mutex
+
 	io.ReadCloser
 
 	lr      limitRange
 	limiter *rate.Limiter
-	Monitor monitor
+	Monitor *monitor
 }
 
 type monitor struct {
+	sync.Mutex
+
 	start time.Time
 	size  int64
 
@@ -62,10 +67,15 @@ func NewLimitChecker(lr limitRange, r io.ReadCloser) *limitChecker {
 }
 
 func (m *monitor) Status() status {
+	//	m.Lock()
+	//defer m.Unlock()
 	return m.status
 }
 
 func (lc *limitChecker) Read(p []byte) (int, error) {
+
+	//	lc.Monitor.Lock()
+	//defer lc.Monitor.Unlock()
 
 	var err error
 	var read int
