@@ -77,13 +77,13 @@ func (t *limitTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 		var monitor *monitor
 
 		t.reader.Lock()
+		t.reader.Monitor.Lock()
 		if t.reader != nil {
 			monitor = t.reader.Monitor
 		}
 
 		t.reader = NewLimitChecker(t.lr, r.Body)
 
-		t.reader.Monitor.Lock()
 		if monitor != nil {
 			t.reader.Monitor = monitor
 		} else {
