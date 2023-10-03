@@ -32,7 +32,7 @@ const bucketSize = 1000
 type LimitTransport struct {
 	rt         http.RoundTripper
 	lr         LimitRange
-	reader     *LimitChecker
+	reader     *limitChecker
 	readerLock sync.Mutex
 	filesize   int64
 	rateLimit  int
@@ -45,7 +45,7 @@ type LimitRange struct {
 	end   time.Time
 }
 
-type LimitChecker struct {
+type limitChecker struct {
 	io.ReadCloser
 
 	lr        LimitRange
@@ -76,8 +76,8 @@ func (m *Monitor) Status() Status {
 	return m.status
 }
 
-func NewLimitChecker(lr LimitRange, r io.ReadCloser, rateLimit int) *LimitChecker {
-	lc := &LimitChecker{
+func newLimitChecker(lr LimitRange, r io.ReadCloser, rateLimit int) *limitChecker {
+	lc := &limitChecker{
 		lr:         lr,
 		ReadCloser: r,
 		Monitor:    &Monitor{},
@@ -86,7 +86,7 @@ func NewLimitChecker(lr LimitRange, r io.ReadCloser, rateLimit int) *LimitChecke
 	return lc
 }
 
-func (lc *LimitChecker) Read(p []byte) (int, error) {
+func (lc *limitChecker) Read(p []byte) (int, error) {
 
 	lc.Monitor.Lock()
 	defer lc.Monitor.Unlock()
@@ -168,7 +168,7 @@ func (lc *LimitChecker) Read(p []byte) (int, error) {
 	return read, err
 }
 
-func (lc *LimitChecker) Close() error {
+func (lc *limitChecker) Close() error {
 	return lc.ReadCloser.Close()
 }
 
@@ -205,7 +205,13 @@ func ParseLimitBetween(between, inputTimeLayout string) (LimitRange, error) {
 
 func NewLimitTransport(logger utils.Logger, rt http.RoundTripper, lr LimitRange, filesize int64, ratelimit int) *LimitTransport {
 
-	return &LimitTransport{logger: logger, rt: rt, lr: lr, filesize: filesize, rateLimit: ratelimit}
+	return &LimitTransport{
+		logger:    logger,
+		rt:        rt,
+		lr:        lr,
+		filesize:  filesize,
+		rateLimit: ratelimit,
+	}
 }
 
 func (t *LimitTransport) RoundTrip(r *http.Request) (*http.Response, error) {
@@ -227,7 +233,7 @@ func (t *LimitTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 			t.reader.Monitor.Unlock()
 		}
 
-		t.reader = NewLimitChecker(t.lr, r.Body, t.rateLimit)
+		t.reader = newLimitChecker(t.lr, r.Body, t.rateLimit)
 
 		t.reader.Monitor.Lock()
 		if monitor != nil {
