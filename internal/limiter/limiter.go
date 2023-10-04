@@ -30,11 +30,12 @@ import (
 const bucketSize = 1000
 
 type LimitTransport struct {
-	rt        http.RoundTripper
-	lr        LimitRange
-	reader    *limitChecker
-	filesize  int64
-	rateLimit int
+	rt         http.RoundTripper
+	lr         LimitRange
+	reader     limitChecker
+	readerInit bool
+	filesize   int64
+	rateLimit  int
 
 	logger utils.Logger
 }
@@ -50,15 +51,15 @@ type limitChecker struct {
 
 	lr        LimitRange
 	limiter   *rate.Limiter
-	Monitor   *Monitor
+	monitor   Monitor
 	rateLimit int
 }
 
 type Monitor struct {
-	start  time.Time
-	status Status
+	start time.Time
+	size  int64
 
-	Size int64
+	status Status
 }
 
 type Status struct {
@@ -78,8 +79,8 @@ func (lc *limitChecker) Read(p []byte) (int, error) {
 
 	limit := false
 
-	if lc.Monitor.start.IsZero() {
-		lc.Monitor.start = time.Now()
+	if lc.monitor.start.IsZero() {
+		lc.monitor.start = time.Now()
 	}
 
 	if lc.rateLimit > 0 {
@@ -138,14 +139,14 @@ func (lc *limitChecker) Read(p []byte) (int, error) {
 		read, err = lc.ReadCloser.Read(p)
 	}
 
-	lc.Monitor.status.Bytes += int64(read)
+	lc.monitor.status.Bytes += int64(read)
 	// bytes read will be greater than filesize due to HTTP headers etc, so reset to filesize
-	if lc.Monitor.status.Bytes > lc.Monitor.Size {
-		lc.Monitor.status.Bytes = lc.Monitor.Size
+	if lc.monitor.status.Bytes > lc.monitor.size {
+		lc.monitor.status.Bytes = lc.monitor.size
 	}
-	lc.Monitor.status.Progress = fmt.Sprintf("%.1f%%", float64(lc.Monitor.status.Bytes)/float64(lc.Monitor.Size)*100)
-	lc.Monitor.status.AvgRate = int64(float64(lc.Monitor.status.Bytes) / time.Since(lc.Monitor.start).Seconds())
-	lc.Monitor.status.TimeRem = time.Duration(float64(lc.Monitor.Size-lc.Monitor.status.Bytes)/float64(lc.Monitor.status.AvgRate)) * time.Second
+	lc.monitor.status.Progress = fmt.Sprintf("%.1f%%", float64(lc.monitor.status.Bytes)/float64(lc.monitor.size)*100)
+	lc.monitor.status.AvgRate = int64(float64(lc.monitor.status.Bytes) / time.Since(lc.monitor.start).Seconds())
+	lc.monitor.status.TimeRem = time.Duration(float64(lc.monitor.size-lc.monitor.status.Bytes)/float64(lc.monitor.status.AvgRate)) * time.Second
 
 	return read, err
 }
@@ -206,22 +207,20 @@ func (t *LimitTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 		strings.HasPrefix(contentType, "application/octet-stream") ||
 		r.Header.Get("X-Upload-Content-Type") == "application/octet-stream" {
 
-		var monitor *Monitor
-
-		if t.reader == nil {
-			t.reader = &limitChecker{
-				lr:        t.lr,
-				rateLimit: t.rateLimit,
-				Monitor: &Monitor{
-					Size: t.filesize,
-				},
-			}
-		}
+		var monitor Monitor
 
 		t.reader.Lock()
+		if !t.readerInit {
+			t.reader.lr = t.lr
+			t.reader.rateLimit = t.rateLimit
+			t.reader.monitor = Monitor{
+				size: t.filesize,
+			}
+			t.readerInit = true
+		}
 
-		if !t.reader.Monitor.start.IsZero() {
-			t.reader.Monitor = monitor
+		if !t.reader.monitor.start.IsZero() {
+			t.reader.monitor = monitor
 		}
 
 		if t.reader.ReadCloser != nil {
@@ -230,7 +229,7 @@ func (t *LimitTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 
 		t.reader.ReadCloser = r.Body
 
-		r.Body = t.reader
+		r.Body = &t.reader
 		t.reader.Unlock()
 	}
 
@@ -243,11 +242,7 @@ func (t *LimitTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 }
 
 func (t *LimitTransport) GetMonitorStatus() Status {
-	if t.reader == nil {
-		return Status{}
-	}
-
 	t.reader.Lock()
 	defer t.reader.Unlock()
-	return t.reader.Monitor.status
+	return t.reader.monitor.status
 }
