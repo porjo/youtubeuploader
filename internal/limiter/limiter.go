@@ -30,12 +30,11 @@ import (
 const bucketSize = 1000
 
 type LimitTransport struct {
-	rt         http.RoundTripper
-	lr         LimitRange
-	reader     *limitChecker
-	readerLock sync.Mutex
-	filesize   int64
-	rateLimit  int
+	rt        http.RoundTripper
+	lr        LimitRange
+	reader    *limitChecker
+	filesize  int64
+	rateLimit int
 
 	logger utils.Logger
 }
@@ -47,6 +46,7 @@ type LimitRange struct {
 
 type limitChecker struct {
 	io.ReadCloser
+	sync.Mutex
 
 	lr        LimitRange
 	limiter   *rate.Limiter
@@ -55,12 +55,10 @@ type limitChecker struct {
 }
 
 type Monitor struct {
-	sync.Mutex
-
-	start time.Time
-	Size  int64
-
+	start  time.Time
 	status Status
+
+	Size int64
 }
 
 type Status struct {
@@ -70,26 +68,10 @@ type Status struct {
 	Progress string
 }
 
-func (m *Monitor) Status() Status {
-	m.Lock()
-	defer m.Unlock()
-	return m.status
-}
-
-func newLimitChecker(lr LimitRange, r io.ReadCloser, rateLimit int) *limitChecker {
-	lc := &limitChecker{
-		lr:         lr,
-		ReadCloser: r,
-		Monitor:    &Monitor{},
-		rateLimit:  rateLimit,
-	}
-	return lc
-}
-
 func (lc *limitChecker) Read(p []byte) (int, error) {
 
-	lc.Monitor.Lock()
-	defer lc.Monitor.Unlock()
+	lc.Lock()
+	defer lc.Unlock()
 
 	var err error
 	var read int
@@ -226,25 +208,30 @@ func (t *LimitTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 
 		var monitor *Monitor
 
-		t.readerLock.Lock()
-		if t.reader != nil {
-			t.reader.Monitor.Lock()
-			monitor = t.reader.Monitor
-			t.reader.Monitor.Unlock()
+		if t.reader == nil {
+			t.reader = &limitChecker{
+				lr:        t.lr,
+				rateLimit: t.rateLimit,
+				Monitor: &Monitor{
+					Size: t.filesize,
+				},
+			}
 		}
 
-		t.reader = newLimitChecker(t.lr, r.Body, t.rateLimit)
+		t.reader.Lock()
 
-		t.reader.Monitor.Lock()
-		if monitor != nil {
+		if !t.reader.Monitor.start.IsZero() {
 			t.reader.Monitor = monitor
-		} else {
-			t.reader.Monitor.Size = t.filesize
 		}
-		t.reader.Monitor.Unlock()
+
+		if t.reader.ReadCloser != nil {
+			t.reader.ReadCloser.Close()
+		}
+
+		t.reader.ReadCloser = r.Body
 
 		r.Body = t.reader
-		t.readerLock.Unlock()
+		t.reader.Unlock()
 	}
 
 	if contentType != "" {
@@ -256,7 +243,11 @@ func (t *LimitTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 }
 
 func (t *LimitTransport) GetMonitorStatus() Status {
-	t.readerLock.Lock()
-	defer t.readerLock.Unlock()
-	return t.reader.Monitor.Status()
+	if t.reader == nil {
+		return Status{}
+	}
+
+	t.reader.Lock()
+	defer t.reader.Unlock()
+	return t.reader.Monitor.status
 }
