@@ -12,7 +12,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package youtubeuploader
 
 import (
 	"encoding/json"
@@ -24,6 +24,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/porjo/youtubeuploader/internal/utils"
 	"google.golang.org/api/youtube/v3"
 )
 
@@ -38,25 +39,54 @@ const (
 	CAPTION
 )
 
+type Config struct {
+	Filename          string
+	Thumbnail         string
+	Caption           string
+	Title             string
+	Description       string
+	Language          string
+	CategoryId        string
+	Tags              string
+	Privacy           string
+	Quiet             bool
+	RateLimit         int
+	MetaJSON          string
+	MetaJSONOut       string
+	LimitBetween      string
+	OAuthPort         int
+	ShowAppVersion    bool
+	Chunksize         int
+	NotifySubscribers bool
+	SendFileName      bool
+
+	Logger utils.Logger
+}
+
 type MediaType int
 
 type Date struct {
 	time.Time
 }
 
-func LoadVideoMeta(filename string, video *youtube.Video) (*VideoMeta, error) {
+func LoadConfig() (*VideoMeta, error) {
+
+	return nil, nil
+}
+
+func LoadVideoMeta(config Config, video *youtube.Video) (*VideoMeta, error) {
 	videoMeta := &VideoMeta{}
 	// attempt to load from meta JSON, otherwise use values specified from command line flags
-	if filename != "" {
-		file, e := os.ReadFile(filename)
+	if config.MetaJSON != "" {
+		file, e := os.ReadFile(config.MetaJSON)
 		if e != nil {
-			e2 := fmt.Errorf("error reading file %q: %s", filename, e)
+			e2 := fmt.Errorf("error reading file %q: %s", config.MetaJSON, e)
 			return nil, e2
 		}
 
 		e = json.Unmarshal(file, &videoMeta)
 		if e != nil {
-			e2 := fmt.Errorf("error parsing file %q: %s", filename, e)
+			e2 := fmt.Errorf("error parsing file %q: %s", config.MetaJSON, e)
 			return nil, e2
 		}
 
@@ -115,37 +145,37 @@ func LoadVideoMeta(filename string, video *youtube.Video) (*VideoMeta, error) {
 	}
 
 	if video.Status.PrivacyStatus == "" {
-		video.Status.PrivacyStatus = *privacy
+		video.Status.PrivacyStatus = config.Privacy
 	}
-	if video.Snippet.Tags == nil && strings.Trim(*tags, "") != "" {
-		video.Snippet.Tags = strings.Split(*tags, ",")
+	if video.Snippet.Tags == nil && strings.Trim(config.Tags, "") != "" {
+		video.Snippet.Tags = strings.Split(config.Tags, ",")
 	}
 	if video.Snippet.Title == "" {
-		video.Snippet.Title = *title
+		video.Snippet.Title = config.Title
 	}
 	if video.Snippet.Description == "" {
 		// expand newlines
-		descriptionExpanded, err := strconv.Unquote(`"` + *description + `"`)
+		descriptionExpanded, err := strconv.Unquote(`"` + config.Description + `"`)
 		if err != nil {
-			video.Snippet.Description = *description
+			video.Snippet.Description = config.Description
 		} else {
 			video.Snippet.Description = descriptionExpanded
 		}
 	}
-	if video.Snippet.CategoryId == "" && *categoryId != "" {
-		video.Snippet.CategoryId = *categoryId
+	if video.Snippet.CategoryId == "" && config.CategoryId != "" {
+		video.Snippet.CategoryId = config.CategoryId
 	}
-	if video.Snippet.DefaultLanguage == "" && *language != "" {
-		video.Snippet.DefaultLanguage = *language
+	if video.Snippet.DefaultLanguage == "" && config.Language != "" {
+		video.Snippet.DefaultLanguage = config.Language
 	}
-	if video.Snippet.DefaultAudioLanguage == "" && *language != "" {
-		video.Snippet.DefaultAudioLanguage = *language
+	if video.Snippet.DefaultAudioLanguage == "" && config.Language != "" {
+		video.Snippet.DefaultAudioLanguage = config.Language
 	}
 
 	return videoMeta, nil
 }
 
-func Open(filename string, mediaType MediaType) (io.ReadCloser, int64, error) {
+func Open(filename string, mediaType MediaType) (io.ReadCloser, int, error) {
 	var reader io.ReadCloser
 	var filesize int64
 	var err error
@@ -159,7 +189,7 @@ func Open(filename string, mediaType MediaType) (io.ReadCloser, int64, error) {
 		if lenStr != "" {
 			filesize, err = strconv.ParseInt(lenStr, 10, 64)
 			if err != nil {
-				return reader, filesize, err
+				return reader, int(filesize), err
 			}
 		}
 
@@ -212,7 +242,7 @@ func Open(filename string, mediaType MediaType) (io.ReadCloser, int64, error) {
 		filesize = fileInfo.Size()
 
 	}
-	return reader, filesize, err
+	return reader, int(filesize), err
 }
 
 func (d *Date) UnmarshalJSON(b []byte) (err error) {

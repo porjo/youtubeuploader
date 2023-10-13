@@ -1,0 +1,32 @@
+name: Go Tests
+
+on:
+  push:
+
+
+jobs:
+  lint:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v4
+        with:
+          cache: false
+      -
+        name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+
+  test:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      -
+        name: Set up Go
+        uses: actions/setup-go@v4
+      -
+        name: Go tests
+        run: go test -v -race ./...
