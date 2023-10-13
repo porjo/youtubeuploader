@@ -1,8 +1,11 @@
 name: Go Tests
 
+# Run on any push except tag push
+# See: https://stackoverflow.com/a/71879890/202311
 on:
   push:
-
+    branches:
+      - '**'
 
 jobs:
   lint:
