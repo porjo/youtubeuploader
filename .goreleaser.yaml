@@ -1,11 +1,8 @@
-# This is an example .goreleaser.yml file with some sensible defaults.
-# Make sure to check the documentation at https://goreleaser.com
 before:
   hooks:
-    # You may remove this if you don't use go modules.
     - go mod tidy
-    # TODO how to verify signed tags without needing to install public key?
-    #- git tag -v {{.Version}}
+    - sh -c "curl https://github.com/porjo.gpg | gpg --import"
+    - git verify-tag {{.Version}}
 builds:
   - env:
     - CGO_ENABLED=0
