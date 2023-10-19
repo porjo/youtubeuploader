@@ -29,7 +29,7 @@ import (
 )
 
 type LimitTransport struct {
-	rountrip   http.RoundTripper
+	roundtrip  http.RoundTripper
 	limitRange LimitRange
 	reader     limitChecker
 	readerInit bool
@@ -188,7 +188,7 @@ func NewLimitTransport(logger utils.Logger, rt http.RoundTripper, lr LimitRange,
 
 	lt := &LimitTransport{
 		logger:     logger,
-		rountrip:   rt,
+		roundtrip:  rt,
 		limitRange: lr,
 		filesize:   filesize,
 		rateLimit:  ratelimit,
@@ -201,7 +201,7 @@ func (t *LimitTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 
 	contentType := r.Header.Get("Content-Type")
 
-	// FIXME: this is messy. Need a better way to detect rountrip associated with video upload
+	// FIXME: this is messy. Need a better way to detect roundtrip associated with video upload
 	if strings.HasPrefix(contentType, "multipart/related") ||
 		strings.HasPrefix(contentType, "video") ||
 		strings.HasPrefix(contentType, "application/octet-stream") ||
@@ -230,7 +230,7 @@ func (t *LimitTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 	}
 	t.logger.Debugf("Requesting URL %q\n", r.URL)
 
-	resp, err := t.rountrip.RoundTrip(r)
+	resp, err := t.roundtrip.RoundTrip(r)
 	if err == nil {
 		t.logger.Debugf("Response status code: %d\n", resp.StatusCode)
 		if resp.Body != nil {
