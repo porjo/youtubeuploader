@@ -29,8 +29,8 @@ import (
 )
 
 type LimitTransport struct {
-	rt         http.RoundTripper
-	lr         LimitRange
+	rountrip   http.RoundTripper
+	limitRange LimitRange
 	reader     limitChecker
 	readerInit bool
 	filesize   int
@@ -48,7 +48,7 @@ type limitChecker struct {
 	io.ReadCloser
 	sync.Mutex
 
-	lr         LimitRange
+	limitRange LimitRange
 	limiter    *rate.Limiter
 	status     Status
 	rateLimit  int
@@ -89,17 +89,17 @@ func (lc *limitChecker) Read(p []byte) (int, error) {
 			lc.limiter = rate.NewLimiter(rate.Limit(lc.rateLimit*125), lc.burstLimit)
 		}
 
-		if lc.lr.start.IsZero() || lc.lr.end.IsZero() {
+		if lc.limitRange.start.IsZero() || lc.limitRange.end.IsZero() {
 			limit = true
 		} else {
 
-			if time.Since(lc.lr.start) >= time.Hour*24 {
-				lc.lr.start = lc.lr.start.AddDate(0, 0, 1)
-				lc.lr.end = lc.lr.end.AddDate(0, 0, 1)
+			if time.Since(lc.limitRange.start) >= time.Hour*24 {
+				lc.limitRange.start = lc.limitRange.start.AddDate(0, 0, 1)
+				lc.limitRange.end = lc.limitRange.end.AddDate(0, 0, 1)
 			}
 
 			now := time.Now()
-			if lc.lr.start.Before(now) && lc.lr.end.After(now) {
+			if lc.limitRange.start.Before(now) && lc.limitRange.end.After(now) {
 				limit = true
 			} else {
 				limit = false
@@ -107,39 +107,25 @@ func (lc *limitChecker) Read(p []byte) (int, error) {
 		}
 	}
 
-	var err error
-	var read int
+	read, err := lc.ReadCloser.Read(p)
+	if err != nil {
+		return read, err
+	}
 
 	if limit {
 
-		for {
-			var readL int
+		tokens := read
 
-			readL, err = lc.ReadCloser.Read(p[read:])
-			read += readL
-
-			if err != nil {
-				break
-			}
-
-			tokens := readL
-
-			// tokens cannot exceed size of bucket (burst limit)
-			if tokens > lc.burstLimit {
-				tokens = lc.burstLimit
-			}
-
-			err = lc.limiter.WaitN(context.Background(), tokens)
-			if err != nil {
-				break
-			}
-
-			if read == len(p) {
-				break
-			}
+		// tokens cannot exceed size of bucket (burst limit)
+		if tokens > lc.burstLimit {
+			tokens = lc.burstLimit
 		}
-	} else {
-		read, err = lc.ReadCloser.Read(p)
+
+		err = lc.limiter.WaitN(context.Background(), tokens)
+		if err != nil {
+			return read, err
+		}
+
 	}
 
 	lc.status.Bytes += read
@@ -201,11 +187,11 @@ func NewLimitTransport(logger utils.Logger, rt http.RoundTripper, lr LimitRange,
 	}
 
 	lt := &LimitTransport{
-		logger:    logger,
-		rt:        rt,
-		lr:        lr,
-		filesize:  filesize,
-		rateLimit: ratelimit,
+		logger:     logger,
+		rountrip:   rt,
+		limitRange: lr,
+		filesize:   filesize,
+		rateLimit:  ratelimit,
 	}
 
 	return lt, nil
@@ -223,7 +209,7 @@ func (t *LimitTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 
 		t.reader.Lock()
 		if !t.readerInit {
-			t.reader.lr = t.lr
+			t.reader.limitRange = t.limitRange
 			t.reader.rateLimit = t.rateLimit
 			t.reader.status.TotalBytes = t.filesize
 			t.readerInit = true
@@ -244,7 +230,7 @@ func (t *LimitTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 	}
 	t.logger.Debugf("Requesting URL %q\n", r.URL)
 
-	resp, err := t.rt.RoundTrip(r)
+	resp, err := t.rountrip.RoundTrip(r)
 	if err == nil {
 		t.logger.Debugf("Response status code: %d\n", resp.StatusCode)
 		if resp.Body != nil {
