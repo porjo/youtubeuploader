@@ -90,11 +90,7 @@ func Run(ctx context.Context, transport *limiter.LimitTransport, config Config, 
 		return fmt.Errorf("error building OAuth client: %w", err)
 	}
 
-	upload := &youtube.Video{
-		Snippet:          &youtube.VideoSnippet{},
-		RecordingDetails: &youtube.VideoRecordingDetails{},
-		Status:           &youtube.VideoStatus{},
-	}
+	upload := &youtube.Video{}
 
 	videoMeta, err := LoadVideoMeta(config, upload)
 	if err != nil {
