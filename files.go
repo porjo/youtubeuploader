@@ -76,6 +76,16 @@ func LoadConfig() (*VideoMeta, error) {
 
 func LoadVideoMeta(config Config, video *youtube.Video) (*VideoMeta, error) {
 	videoMeta := &VideoMeta{}
+
+	video.Snippet = &youtube.VideoSnippet{}
+	video.RecordingDetails = &youtube.VideoRecordingDetails{}
+	video.Status = &youtube.VideoStatus{}
+
+	// Force send some boolean values.
+	// Without this, defaults on the Youtube side are used which can have unexpected results.
+	// See: https://github.com/porjo/youtubeuploader/issues/132
+	video.Status.ForceSendFields = []string{"SelfDeclaredMadeForKids"}
+
 	// attempt to load from meta JSON, otherwise use values specified from command line flags
 	if config.MetaJSON != "" {
 		file, e := os.ReadFile(config.MetaJSON)
@@ -90,7 +100,6 @@ func LoadVideoMeta(config Config, video *youtube.Video) (*VideoMeta, error) {
 			return nil, e2
 		}
 
-		video.Status = &youtube.VideoStatus{}
 		video.Snippet.Tags = videoMeta.Tags
 		video.Snippet.Title = videoMeta.Title
 		video.Snippet.Description = videoMeta.Description
