@@ -78,6 +78,11 @@ func (p *Progress) Run(ctx context.Context, signalChan chan os.Signal) {
 }
 
 func (p *Progress) Output() {
+
+	if !p.transport.HasStarted() {
+		return
+	}
+
 	s := p.transport.GetMonitorStatus()
 	avgRate := float64(s.AvgRate)
 	elapsed := time.Since(s.Start).Round(time.Second)

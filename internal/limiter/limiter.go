@@ -197,6 +197,13 @@ func NewLimitTransport(logger utils.Logger, rt http.RoundTripper, lr LimitRange,
 	return lt, nil
 }
 
+// HasStarted returns whether the LimitTransport has seen use
+func (t *LimitTransport) HasStarted() bool {
+	t.reader.Lock()
+	defer t.reader.Unlock()
+	return t.readerInit
+}
+
 func (t *LimitTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 
 	contentType := r.Header.Get("Content-Type")

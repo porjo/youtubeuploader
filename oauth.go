@@ -153,9 +153,8 @@ func readConfig(scopes []string) (*oauth2.Config, error) {
 
 // startCallbackWebServer starts a web server that listens on http://localhost:8080.
 // The webserver waits for an oauth code in the three-legged auth flow.
-func startCallbackWebServer(oAuthPort int) (callbackCh chan CallbackStatus, err error) {
-	ctx, cancel := context.WithTimeout(context.Background(), callbackTimeout)
-	defer cancel()
+func startCallbackWebServer(ctx context.Context, oAuthPort int) (callbackCh chan CallbackStatus, err error) {
+	ctx2, _ := context.WithTimeout(ctx, callbackTimeout)
 
 	quitChan := make(chan struct{})
 	defer close(quitChan)
@@ -188,7 +187,7 @@ func startCallbackWebServer(oAuthPort int) (callbackCh chan CallbackStatus, err 
 	// shutdown server on context timeout
 	go func() {
 		select {
-		case <-ctx.Done():
+		case <-ctx2.Done():
 			log.Printf("Timed out waiting for request to callback server: http://localhost:%d\n", oAuthPort)
 			err := srv.Shutdown(ctx)
 			if err != nil {
@@ -201,7 +200,8 @@ func startCallbackWebServer(oAuthPort int) (callbackCh chan CallbackStatus, err 
 
 	go func() {
 		defer close(callbackCh)
-		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+		//if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+		if err := srv.ListenAndServe(); err != nil {
 			log.Printf("Callback server error: %s\n", err)
 		}
 	}()
@@ -254,7 +254,7 @@ func BuildOAuthHTTPClient(ctx context.Context, scopes []string, oAuthPort int) (
 	// Start web server.
 	// This is how this program receives the authorization code
 	// when the browser redirects.
-	callbackCh, err := startCallbackWebServer(oAuthPort)
+	callbackCh, err := startCallbackWebServer(ctx, oAuthPort)
 	if err != nil {
 		return nil, err
 	}
