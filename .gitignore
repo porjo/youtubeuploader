@@ -11,5 +11,4 @@
 .*.swp
 vendor
 youtubeuploader
-!cmd/youtubeuploader/
 dist/
