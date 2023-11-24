@@ -1,10 +1,9 @@
 name: goreleaser
 
-# keep this manual for now
-#on:
-#  push:
-#    tags:
-#      - '*'
+on:
+  push:
+    tags:
+      - '*'
 
 permissions:
   contents: write
