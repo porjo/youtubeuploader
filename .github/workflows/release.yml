@@ -1,20 +1,16 @@
 name: goreleaser
 
-on:
-  workflow_run:
-    workflows: ["gotests"]
-    types:
-      - completed
-  push:
-    tags:
-      - '*'
+# keep this manual for now
+#on:
+#  push:
+#    tags:
+#      - '*'
 
 permissions:
   contents: write
 
 jobs:
   goreleaser:
-    if: ${{ github.event_name == 'push' && github.ref_type == 'tag' && github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
       -
