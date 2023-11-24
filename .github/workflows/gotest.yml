@@ -1,4 +1,4 @@
-name: Go Tests
+name: gotests
 
 # Run on any push except tag push
 # See: https://stackoverflow.com/a/71879890/202311

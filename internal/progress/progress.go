@@ -60,6 +60,7 @@ func (p *Progress) Run(ctx context.Context, signalChan chan os.Signal) {
 	} else {
 		ticker = time.NewTicker(p.interval)
 	}
+	defer ticker.Stop()
 
 	for {
 		select {

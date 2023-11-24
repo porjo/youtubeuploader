@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io/fs"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -154,14 +155,16 @@ func readConfig(scopes []string) (*oauth2.Config, error) {
 // startCallbackWebServer starts a web server that listens on http://localhost:8080.
 // The webserver waits for an oauth code in the three-legged auth flow.
 func startCallbackWebServer(ctx context.Context, oAuthPort int) (callbackCh chan CallbackStatus, err error) {
-	ctx2, _ := context.WithTimeout(ctx, callbackTimeout)
 
 	quitChan := make(chan struct{})
 	defer close(quitChan)
 
 	var srv http.Server
 
-	srv.Addr = fmt.Sprintf(":%d", oAuthPort)
+	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", oAuthPort))
+	if err != nil {
+		return nil, err
+	}
 
 	srv.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		code := r.FormValue("code")
@@ -186,8 +189,10 @@ func startCallbackWebServer(ctx context.Context, oAuthPort int) (callbackCh chan
 
 	// shutdown server on context timeout
 	go func() {
+		timer := time.NewTimer(callbackTimeout)
+		defer timer.Stop()
 		select {
-		case <-ctx2.Done():
+		case <-timer.C:
 			log.Printf("Timed out waiting for request to callback server: http://localhost:%d\n", oAuthPort)
 			err := srv.Shutdown(ctx)
 			if err != nil {
@@ -201,8 +206,8 @@ func startCallbackWebServer(ctx context.Context, oAuthPort int) (callbackCh chan
 	go func() {
 		defer close(callbackCh)
 		//if err := srv.ListenAndServe(); err != http.ErrServerClosed {
-		if err := srv.ListenAndServe(); err != nil {
-			log.Printf("Callback server error: %s\n", err)
+		if err := srv.Serve(listener); err != nil {
+			log.Printf("callback server error: %s", err)
 		}
 	}()
 

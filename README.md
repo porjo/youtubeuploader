@@ -1,6 +1,6 @@
 # Youtube Uploader
 
-![Go workflow](https://github.com/porjo/youtubeuploader/actions/workflows/gotest.yml/badge.svg?event=push)
+![Tests](https://github.com/porjo/youtubeuploader/actions/workflows/gotest.yml/badge.svg)
 
 Scripted uploads to youtube.
 
