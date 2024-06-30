@@ -47,19 +47,21 @@ func Run(ctx context.Context, transport *limiter.LimitTransport, config Config, 
 
 	var thumbReader io.ReadCloser
 	if config.Thumbnail != "" {
-		thumbReader, _, err := Open(config.Thumbnail, IMAGE)
+		r, _, err := Open(config.Thumbnail, IMAGE)
 		if err != nil {
 			return err
 		}
+		thumbReader = r
 		defer thumbReader.Close()
 	}
 
 	var captionReader io.ReadCloser
 	if config.Caption != "" {
-		captionReader, _, err := Open(config.Caption, CAPTION)
+		r, _, err := Open(config.Caption, CAPTION)
 		if err != nil {
 			return err
 		}
+		captionReader = r
 		defer captionReader.Close()
 	}
 
