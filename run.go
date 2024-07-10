@@ -116,6 +116,15 @@ func Run(ctx context.Context, transport *limiter.LimitTransport, config Config, 
 	option = googleapi.ChunkSize(config.Chunksize)
 
 	call := service.Videos.Insert([]string{"snippet", "status", "recordingDetails"}, upload)
+
+	// Conditionally set OnBehalfOfContentOwner and OnBehalfOfContentOwnerChannel
+	if config.OnBehalfOfContentOwner != "" {
+		call = call.OnBehalfOfContentOwner(config.OnBehalfOfContentOwner)
+	}
+	if config.OnBehalfOfContentOwnerChannel != "" {
+		call = call.OnBehalfOfContentOwnerChannel(config.OnBehalfOfContentOwnerChannel)
+	}
+
 	if config.SendFileName && config.Filename != "-" {
 		filetitle := filepath.Base(config.Filename)
 		config.Logger.Debugf("Adding file name to request: %q\n", filetitle)
