@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -141,16 +140,16 @@ func Run(ctx context.Context, transport *limiter.LimitTransport, config Config, 
 	}
 
 	if thumbReader != nil {
-		log.Printf("Uploading thumbnail %q...\n", config.Thumbnail)
+		fmt.Printf("Uploading thumbnail %q...\n", config.Thumbnail)
 		_, err = service.Thumbnails.Set(video.Id).Media(thumbReader).Do()
 		if err != nil {
 			return fmt.Errorf("error making YouTube API call: %w", err)
 		}
-		fmt.Printf("Thumbnail uploaded!\n")
 	}
 
 	// Insert caption
 	if captionReader != nil {
+		fmt.Printf("Uploading caption %q...\n", config.Caption)
 		captionObj := &youtube.Caption{
 			Snippet: &youtube.CaptionSnippet{},
 		}
@@ -166,7 +165,6 @@ func Run(ctx context.Context, transport *limiter.LimitTransport, config Config, 
 				return fmt.Errorf("error inserting caption: %w", err)
 			}
 		}
-		fmt.Printf("Caption uploaded!\n")
 	}
 
 	plx := &Playlistx{}
