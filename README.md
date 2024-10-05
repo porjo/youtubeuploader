@@ -62,48 +62,51 @@ If it is the first time you've run the utility, a browser window should popup an
 
 Full list of options:
 ```
+Usage:
   -cache string
-    	token cache file (default "request.token")
+        token cache file (default "request.token")
   -caption string
-    	caption filename. Can be a URL
+        caption filename. Can be a URL
   -categoryId string
-    	video category Id
+        video category Id
   -chunksize int
-    	size (in bytes) of each upload chunk. A zero value will cause all data to be uploaded in a single request (default 16777216)
+        size (in bytes) of each upload chunk. A zero value will cause all data to be uploaded in a single request (default 16777216)
   -debug
-    	turn on verbose log output
+        turn on verbose log output
   -description string
-    	video description (default "uploaded by youtubeuploader")
+        video description (default "uploaded by youtubeuploader")
   -filename string
-    	video filename. Can be a URL. Read from stdin with '-'
+        video filename. Can be a URL. Read from stdin with '-'
   -language string
-    	video language (default "en")
+        video language (default "en")
   -limitBetween string
-    	only rate limit between these times e.g. 10:00-14:00 (local time zone)
+        only rate limit between these times e.g. 10:00-14:00 (local time zone)
   -metaJSON string
-    	JSON file containing title,description,tags etc (optional)
+        JSON file containing title,description,tags etc (optional)
   -metaJSONout string
-    	filename to write uploaded video metadata into (optional)
+        filename to write uploaded video metadata into (optional)
   -notify
-    	notify channel subscribers of new video. Specify '-notify=false' to disable. (default true)
+        notify channel subscribers of new video. Specify '-notify=false' to disable. (default true)
   -oAuthPort int
-    	TCP port to listen on when requesting an oAuth token (default 8080)
+        TCP port to listen on when requesting an oAuth token (default 8080)
   -privacy string
-    	video privacy status (default "private")
+        video privacy status (default "private")
   -quiet
-    	suppress progress indicator
+        suppress progress indicator
   -ratelimit int
-    	rate limit upload in Kbps. No limit by default
+        rate limit upload in Kbps. No limit by default
   -secrets string
-    	Client Secrets configuration (default "client_secrets.json")
+        Client Secrets configuration (default "client_secrets.json")
+  -sendFilename
+        send original file name to YouTube (default true)
   -tags string
-    	comma separated list of video tags
+        comma separated list of video tags
   -thumbnail string
-    	thumbnail filename. Can be a URL
+        thumbnail filename. Can be a URL
   -title string
-    	video title
+        video title
   -version
-    	show version
+        show version
 ```
 *NOTE:* When specifying a URL as the filename, the data will be streamed through the localhost (download from remote host, then upload to Youtube)
 
@@ -135,16 +138,6 @@ Video title, description etc can specified via the command line flags or via a J
 - use `\n` in the description to insert newlines
 - times can be provided in one of two formats: `yyyy-mm-dd` (UTC) or `yyyy-mm-ddThh:mm:ss+zz:zz`
 - any values supplied via command line will take precedence
-
-## Releases
-
-Releases are built with [Goreleaser](https://github.com/goreleaser/goreleaser):
-```
-# Signed tag
-git tag -s <tag>
-git push --tags
-GITHUB_TOKEN=xxxxyyy goreleaser release
-```
 
 ## Credit
 
