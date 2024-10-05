@@ -32,27 +32,36 @@ import (
 
 const inputTimeLayout = "15:04"
 
+// In cmd/youtubeuploader/main.go
+
 var (
-	filename          = flag.String("filename", "", "video filename. Can be a URL. Read from stdin with '-'")
-	thumbnail         = flag.String("thumbnail", "", "thumbnail filename. Can be a URL")
-	caption           = flag.String("caption", "", "caption filename. Can be a URL")
-	title             = flag.String("title", "", "video title")
-	description       = flag.String("description", "uploaded by youtubeuploader", "video description")
-	language          = flag.String("language", "en", "video language")
-	categoryId        = flag.String("categoryId", "", "video category Id")
-	tags              = flag.String("tags", "", "comma separated list of video tags")
-	privacy           = flag.String("privacy", "private", "video privacy status")
-	quiet             = flag.Bool("quiet", false, "suppress progress indicator")
-	rateLimit         = flag.Int("ratelimit", 0, "rate limit upload in Kbps. No limit by default")
-	metaJSON          = flag.String("metaJSON", "", "JSON file containing title,description,tags etc (optional)")
-	metaJSONout       = flag.String("metaJSONout", "", "filename to write uploaded video metadata into (optional)")
-	limitBetween      = flag.String("limitBetween", "", "only rate limit between these times e.g. 10:00-14:00 (local time zone)")
-	oAuthPort         = flag.Int("oAuthPort", 8080, "TCP port to listen on when requesting an oAuth token")
-	showAppVersion    = flag.Bool("version", false, "show version")
-	chunksize         = flag.Int("chunksize", googleapi.DefaultUploadChunkSize, "size (in bytes) of each upload chunk. A zero value will cause all data to be uploaded in a single request")
-	notifySubscribers = flag.Bool("notify", true, "notify channel subscribers of new video. Specify '-notify=false' to disable.")
-	debug             = flag.Bool("debug", false, "turn on verbose log output")
-	sendFileName      = flag.Bool("sendFilename", true, "send original file name to YouTube")
+// Existing flags...
+// Other flags...
+)
+var (
+	filename                      = flag.String("filename", "", "video filename. Can be a URL. Read from stdin with '-'")
+	thumbnail                     = flag.String("thumbnail", "", "thumbnail filename. Can be a URL")
+	caption                       = flag.String("caption", "", "caption filename. Can be a URL")
+	title                         = flag.String("title", "", "video title")
+	description                   = flag.String("description", "uploaded by youtubeuploader", "video description")
+	language                      = flag.String("language", "en", "video language")
+	categoryId                    = flag.String("categoryId", "", "video category Id")
+	tags                          = flag.String("tags", "", "comma separated list of video tags")
+	privacy                       = flag.String("privacy", "private", "video privacy status")
+	quiet                         = flag.Bool("quiet", false, "suppress progress indicator")
+	rateLimit                     = flag.Int("ratelimit", 0, "rate limit upload in Kbps. No limit by default")
+	metaJSON                      = flag.String("metaJSON", "", "JSON file containing title,description,tags etc (optional)")
+	metaJSONout                   = flag.String("metaJSONout", "", "filename to write uploaded video metadata into (optional)")
+	limitBetween                  = flag.String("limitBetween", "", "only rate limit between these times e.g. 10:00-14:00 (local time zone)")
+	oAuthPort                     = flag.Int("oAuthPort", 8080, "TCP port to listen on when requesting an oAuth token")
+	showAppVersion                = flag.Bool("version", false, "show version")
+	chunksize                     = flag.Int("chunksize", googleapi.DefaultUploadChunkSize, "size (in bytes) of each upload chunk. A zero value will cause all data to be uploaded in a single request")
+	notifySubscribers             = flag.Bool("notify", true, "notify channel subscribers of new video. Specify '-notify=false' to disable.")
+	debug                         = flag.Bool("debug", false, "turn on verbose log output")
+	sendFileName                  = flag.Bool("sendFilename", true, "send original file name to YouTube")
+	channelId                     = flag.String("channelId", "", "Channel ID for which the video is being uploaded")
+	onBehalfOfContentOwner        = flag.String("onBehalfOfContentOwner", "", "Content owner for which the video is being uploaded")
+	onBehalfOfContentOwnerChannel = flag.String("onBehalfOfContentOwnerChannel", "", "Content owner's channel for which the video is being uploaded")
 
 	// this is set by compile-time to match git tag
 	appVersion string = "unknown"
@@ -64,25 +73,28 @@ func main() {
 
 	flag.Parse()
 	config := yt.Config{
-		Filename:          *filename,
-		Thumbnail:         *thumbnail,
-		Caption:           *caption,
-		Title:             *title,
-		Description:       *description,
-		Language:          *language,
-		CategoryId:        *categoryId,
-		Tags:              *tags,
-		Privacy:           *privacy,
-		Quiet:             *quiet,
-		RateLimit:         *rateLimit,
-		MetaJSON:          *metaJSON,
-		MetaJSONOut:       *metaJSONout,
-		LimitBetween:      *limitBetween,
-		OAuthPort:         *oAuthPort,
-		ShowAppVersion:    *showAppVersion,
-		Chunksize:         *chunksize,
-		NotifySubscribers: *notifySubscribers,
-		SendFileName:      *sendFileName,
+		Filename:                      *filename,
+		Thumbnail:                     *thumbnail,
+		Caption:                       *caption,
+		Title:                         *title,
+		Description:                   *description,
+		Language:                      *language,
+		CategoryId:                    *categoryId,
+		Tags:                          *tags,
+		Privacy:                       *privacy,
+		Quiet:                         *quiet,
+		RateLimit:                     *rateLimit,
+		MetaJSON:                      *metaJSON,
+		MetaJSONOut:                   *metaJSONout,
+		LimitBetween:                  *limitBetween,
+		OAuthPort:                     *oAuthPort,
+		ShowAppVersion:                *showAppVersion,
+		Chunksize:                     *chunksize,
+		NotifySubscribers:             *notifySubscribers,
+		SendFileName:                  *sendFileName,
+		ChannelId:                     *channelId,
+		OnBehalfOfContentOwner:        *onBehalfOfContentOwner,
+		OnBehalfOfContentOwnerChannel: *onBehalfOfContentOwnerChannel,
 	}
 
 	config.Logger = utils.NewLogger(*debug)
