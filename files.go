@@ -40,25 +40,28 @@ const (
 )
 
 type Config struct {
-	Filename          string
-	Thumbnail         string
-	Caption           string
-	Title             string
-	Description       string
-	Language          string
-	CategoryId        string
-	Tags              string
-	Privacy           string
-	Quiet             bool
-	RateLimit         int
-	MetaJSON          string
-	MetaJSONOut       string
-	LimitBetween      string
-	OAuthPort         int
-	ShowAppVersion    bool
-	Chunksize         int
-	NotifySubscribers bool
-	SendFileName      bool
+	Filename                      string
+	Thumbnail                     string
+	Caption                       string
+	Title                         string
+	Description                   string
+	Language                      string
+	CategoryId                    string
+	Tags                          string
+	Privacy                       string
+	Quiet                         bool
+	RateLimit                     int
+	MetaJSON                      string
+	MetaJSONOut                   string
+	LimitBetween                  string
+	OAuthPort                     int
+	ShowAppVersion                bool
+	Chunksize                     int
+	NotifySubscribers             bool
+	SendFileName                  bool
+	ChannelId                     string
+	OnBehalfOfContentOwner        string
+	OnBehalfOfContentOwnerChannel string
 
 	Logger utils.Logger
 }
