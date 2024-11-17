@@ -15,11 +15,11 @@ limitations under the License.
 package limiter
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/httputil"
 	"strings"
 	"sync"
 	"time"
@@ -226,9 +226,10 @@ func (t *LimitTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 			t.reader.ReadCloser.Close()
 		}
 
+		// wrap request body in a limitchecker
 		t.reader.ReadCloser = r.Body
-
 		r.Body = &t.reader
+
 		t.reader.Unlock()
 	}
 
@@ -241,13 +242,11 @@ func (t *LimitTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 	if err == nil {
 		t.logger.Debugf("Response status code: %d\n", resp.StatusCode)
 		if resp.Body != nil {
-			defer resp.Body.Close()
-			bodyBytes, err := io.ReadAll(resp.Body)
+			respBytes, err := httputil.DumpResponse(resp, true)
 			if err != nil {
-				t.logger.Debugf("Error reading response body: %s\n", err)
+				t.logger.Debugf("Error reading response: %s\n", err)
 			} else {
-				t.logger.Debugf("response body %s", bodyBytes)
-				resp.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+				t.logger.Debugf("response dump:\n%s", respBytes)
 			}
 		}
 	}

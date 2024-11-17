@@ -300,12 +300,12 @@ func BuildOAuthHTTPClient(ctx context.Context, scopes []string, oAuthPort int) (
 func (f CacheFile) Token() (*oauth2.Token, error) {
 	file, err := os.Open(string(f))
 	if err != nil {
-		return nil, fmt.Errorf("CacheFile.Token: %s", err.Error())
+		return nil, fmt.Errorf("CacheFile.Token: %w", err)
 	}
 	defer file.Close()
 	tok := &oauth2.Token{}
 	if err := json.NewDecoder(file).Decode(tok); err != nil {
-		return nil, fmt.Errorf("CacheFile.Token: %s", err.Error())
+		return nil, fmt.Errorf("CacheFile.Token: %w", err)
 	}
 	return tok, nil
 }
@@ -314,14 +314,14 @@ func (f CacheFile) Token() (*oauth2.Token, error) {
 func (f CacheFile) PutToken(tok *oauth2.Token) error {
 	file, err := os.OpenFile(string(f), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		return fmt.Errorf("CacheFile.PutToken: %s", err.Error())
+		return fmt.Errorf("CacheFile.PutToken: %w", err)
 	}
 	if err := json.NewEncoder(file).Encode(tok); err != nil {
 		file.Close()
-		return fmt.Errorf("CacheFile.PutToken: %s", err.Error())
+		return fmt.Errorf("CacheFile.PutToken: %w", err)
 	}
 	if err := file.Close(); err != nil {
-		return fmt.Errorf("CacheFile.PutToken: %s", err.Error())
+		return fmt.Errorf("CacheFile.PutToken: %w", err)
 	}
 	return nil
 }

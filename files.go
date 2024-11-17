@@ -90,13 +90,13 @@ func LoadVideoMeta(config Config, video *youtube.Video) (*VideoMeta, error) {
 	if config.MetaJSON != "" {
 		file, e := os.ReadFile(config.MetaJSON)
 		if e != nil {
-			e2 := fmt.Errorf("error reading file %q: %s", config.MetaJSON, e)
+			e2 := fmt.Errorf("error reading file %q: %w", config.MetaJSON, e)
 			return nil, e2
 		}
 
 		e = json.Unmarshal(file, &videoMeta)
 		if e != nil {
-			e2 := fmt.Errorf("error parsing file %q: %s", config.MetaJSON, e)
+			e2 := fmt.Errorf("error parsing file %q: %w", config.MetaJSON, e)
 			return nil, e2
 		}
 
@@ -192,7 +192,7 @@ func Open(filename string, mediaType MediaType) (io.ReadCloser, int, error) {
 		var resp *http.Response
 		resp, err = http.Head(filename)
 		if err != nil {
-			return reader, 0, fmt.Errorf("error opening %s: %s", filename, err)
+			return reader, 0, fmt.Errorf("error opening %q: %w", filename, err)
 		}
 		lenStr := resp.Header.Get("content-length")
 		if lenStr != "" {
@@ -204,9 +204,11 @@ func Open(filename string, mediaType MediaType) (io.ReadCloser, int, error) {
 
 		resp, err = http.Get(filename)
 		if err != nil {
-			return reader, 0, fmt.Errorf("error opening %s: %s", filename, err)
+			return reader, 0, fmt.Errorf("error opening %q: %w", filename, err)
 		}
-		if resp.ContentLength != 0 {
+		// Go doc: When err is nil, resp always contains a non-nil resp.Body. Caller should close resp.Body when done reading from it.
+		defer resp.Body.Close()
+		if resp.ContentLength > 0 {
 			filesize = resp.ContentLength
 		}
 		reader = resp.Body
@@ -217,23 +219,23 @@ func Open(filename string, mediaType MediaType) (io.ReadCloser, int, error) {
 		var fileInfo os.FileInfo
 		file, err = os.Open(filename)
 		if err != nil {
-			return reader, 0, fmt.Errorf("error opening %s: %s", filename, err)
+			return reader, 0, fmt.Errorf("error opening %q: %w", filename, err)
 		}
 
 		fileInfo, err = file.Stat()
 		if err != nil {
-			return reader, 0, fmt.Errorf("error stat'ing %s: %s", filename, err)
+			return reader, 0, fmt.Errorf("error stat'ing %q: %w", filename, err)
 		}
 
 		// check the file looks like the media type it is supposed to be
 		buf := make([]byte, 512)
 		_, err = file.Read(buf)
 		if err != nil {
-			return reader, 0, fmt.Errorf("error reading %s: %s", filename, err)
+			return reader, 0, fmt.Errorf("error reading %q: %w", filename, err)
 		}
 		_, err = file.Seek(0, 0)
 		if err != nil {
-			return reader, 0, fmt.Errorf("error reading %s: %s", filename, err)
+			return reader, 0, fmt.Errorf("error reading %q: %w", filename, err)
 		}
 		contentType := http.DetectContentType(buf)
 		switch mediaType {

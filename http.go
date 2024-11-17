@@ -63,7 +63,7 @@ func playlistList(service *youtube.Service, pageToken string) (*youtube.Playlist
 
 	response, err := call.Do()
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving playlists: %s", err)
+		return nil, fmt.Errorf("error retrieving playlists: %w", err)
 	}
 
 	return response, nil
@@ -107,7 +107,7 @@ func (plx *Playlistx) AddVideoToPlaylist(service *youtube.Service, videoID strin
 		// API doesn't return playlist ID here!?
 		playlist, err = insertCall.Do()
 		if err != nil {
-			return fmt.Errorf("error creating playlist with title %q: %s", plx.Title, err)
+			return fmt.Errorf("error creating playlist with title %q: %w", plx.Title, err)
 		}
 	}
 
