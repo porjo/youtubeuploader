@@ -45,6 +45,9 @@ func (i *arrayFlags) Set(value string) error {
 	return nil
 }
 
+// this is set at compile time to match git tag
+var appVersion string = "unknown"
+
 func main() {
 
 	var err error
@@ -72,9 +75,6 @@ func main() {
 	notifySubscribers := flag.Bool("notify", true, "notify channel subscribers of new video. Specify '-notify:=false' to disable.")
 	debug := flag.Bool("debug", false, "turn on verbose log output")
 	sendFileName := flag.Bool("sendFilename", true, "send original file name to YouTube")
-
-	// this is set by compile-time to match git tag
-	appVersion := "unknown"
 
 	flag.Parse()
 	config := yt.Config{
