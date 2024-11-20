@@ -29,7 +29,7 @@ import (
 )
 
 type LimitTransport struct {
-	roundtrip  http.RoundTripper
+	transport  http.RoundTripper
 	limitRange LimitRange
 	reader     limitChecker
 	readerInit bool
@@ -188,7 +188,7 @@ func NewLimitTransport(logger utils.Logger, rt http.RoundTripper, lr LimitRange,
 
 	lt := &LimitTransport{
 		logger:     logger,
-		roundtrip:  rt,
+		transport:  rt,
 		limitRange: lr,
 		filesize:   filesize,
 		rateLimit:  ratelimit,
@@ -238,7 +238,7 @@ func (t *LimitTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 	}
 	t.logger.Debugf("Requesting URL %q\n", r.URL)
 
-	resp, err := t.roundtrip.RoundTrip(r)
+	resp, err := t.transport.RoundTrip(r)
 	if err == nil {
 		t.logger.Debugf("Response status code: %d\n", resp.StatusCode)
 		if resp.Body != nil {

@@ -24,6 +24,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -61,8 +62,10 @@ type mockReader struct {
 }
 
 func (m *mockTransport) RoundTrip(r *http.Request) (*http.Response, error) {
-	fmt.Printf("original request URL %s\n", r.URL.String())
-	r.URL = m.url
+	fmt.Printf("%s URL %s\n", r.Method, r.URL.String())
+	r.URL.Scheme = m.url.Scheme
+	r.URL.Host = m.url.Host
+
 	return http.DefaultTransport.RoundTrip(r)
 }
 
@@ -87,8 +90,7 @@ func TestMain(m *testing.M) {
 	testServer = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		// be sure to read the request body otherwise the client gets confused
-		// body, err := io.ReadAll(r.Body)
-		_, err := io.ReadAll(r.Body)
+		_, err := io.Copy(io.Discard, r.Body)
 		if err != nil {
 			log.Printf("Error reading body: %v", err)
 			http.Error(w, "can't read body", http.StatusBadRequest)
@@ -97,20 +99,50 @@ func TestMain(m *testing.M) {
 		//		log.Printf("Mock server: request body length %d", len(body))
 
 		w.Header().Set("Content-Type", "application/json")
-		if r.Host == "oauth2.googleapis.com" {
+		switch r.Host {
+		case "oauth2.googleapis.com":
 			fmt.Fprintln(w, oAuthResponse)
-		} else if r.Host == "youtube.googleapis.com" {
-			video := youtube.Video{
-				Id: "test",
+		case "youtube.googleapis.com":
+
+			if strings.HasPrefix(r.URL.RequestURI(), "/upload") {
+				video := youtube.Video{
+					Id: "test",
+				}
+				videoJ, err := json.Marshal(video)
+				if err != nil {
+					fmt.Printf("json marshall error %s\n", err)
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+				fmt.Fprintln(w, string(videoJ))
+			} else if strings.HasPrefix(r.URL.RequestURI(), "/youtube/v3/playlists") {
+				playlist1 := &youtube.Playlist{
+					Id: "xxxx",
+					Snippet: &youtube.PlaylistSnippet{
+						Title: "Test Playlist 1",
+					},
+				}
+				playlist2 := &youtube.Playlist{
+					Id: "yyyy",
+					Snippet: &youtube.PlaylistSnippet{
+						Title: "Test Playlist 2",
+					},
+				}
+				playlistResponse := youtube.PlaylistListResponse{
+					Items: []*youtube.Playlist{playlist1, playlist2},
+				}
+				playlistJ, err := json.Marshal(playlistResponse)
+				if err != nil {
+					fmt.Printf("json marshall error %s\n", err)
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+				fmt.Fprintln(w, string(playlistJ))
+			} else if strings.HasPrefix(r.URL.RequestURI(), "/youtube/v3/playlistItems") {
+				fmt.Fprintln(w, "{}")
 			}
-			videoJ, err := json.Marshal(video)
-			if err != nil {
-				fmt.Printf("json marshall error %s\n", err)
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			fmt.Fprintln(w, string(videoJ))
 		}
+
 	}))
 	defer testServer.Close()
 
