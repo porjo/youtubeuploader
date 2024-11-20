@@ -20,6 +20,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -54,6 +55,7 @@ type Config struct {
 	MetaJSON          string
 	MetaJSONOut       string
 	LimitBetween      string
+	PlaylistIDs       []string
 	OAuthPort         int
 	ShowAppVersion    bool
 	Chunksize         int
@@ -67,11 +69,6 @@ type MediaType int
 
 type Date struct {
 	time.Time
-}
-
-func LoadConfig() (*VideoMeta, error) {
-
-	return nil, nil
 }
 
 func LoadVideoMeta(config Config, video *youtube.Video) (*VideoMeta, error) {
@@ -180,6 +177,11 @@ func LoadVideoMeta(config Config, video *youtube.Video) (*VideoMeta, error) {
 	if video.Snippet.DefaultAudioLanguage == "" && config.Language != "" {
 		video.Snippet.DefaultAudioLanguage = config.Language
 	}
+
+	// combine cli flag playistIDs and metaJSON playlistIDs. Remove any duplicates
+	playlistIDs := slices.Concat(config.PlaylistIDs, videoMeta.PlaylistIDs)
+	slices.Sort(playlistIDs)
+	videoMeta.PlaylistIDs = slices.Compact(playlistIDs)
 
 	return videoMeta, nil
 }

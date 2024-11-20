@@ -32,35 +32,49 @@ import (
 
 const inputTimeLayout = "15:04"
 
-var (
-	filename          = flag.String("filename", "", "video filename. Can be a URL. Read from stdin with '-'")
-	thumbnail         = flag.String("thumbnail", "", "thumbnail filename. Can be a URL")
-	caption           = flag.String("caption", "", "caption filename. Can be a URL")
-	title             = flag.String("title", "", "video title")
-	description       = flag.String("description", "uploaded by youtubeuploader", "video description")
-	language          = flag.String("language", "en", "video language")
-	categoryId        = flag.String("categoryId", "", "video category Id")
-	tags              = flag.String("tags", "", "comma separated list of video tags")
-	privacy           = flag.String("privacy", "private", "video privacy status")
-	quiet             = flag.Bool("quiet", false, "suppress progress indicator")
-	rateLimit         = flag.Int("ratelimit", 0, "rate limit upload in Kbps. No limit by default")
-	metaJSON          = flag.String("metaJSON", "", "JSON file containing title,description,tags etc (optional)")
-	metaJSONout       = flag.String("metaJSONout", "", "filename to write uploaded video metadata into (optional)")
-	limitBetween      = flag.String("limitBetween", "", "only rate limit between these times e.g. 10:00-14:00 (local time zone)")
-	oAuthPort         = flag.Int("oAuthPort", 8080, "TCP port to listen on when requesting an oAuth token")
-	showAppVersion    = flag.Bool("version", false, "show version")
-	chunksize         = flag.Int("chunksize", googleapi.DefaultUploadChunkSize, "size (in bytes) of each upload chunk. A zero value will cause all data to be uploaded in a single request")
-	notifySubscribers = flag.Bool("notify", true, "notify channel subscribers of new video. Specify '-notify=false' to disable.")
-	debug             = flag.Bool("debug", false, "turn on verbose log output")
-	sendFileName      = flag.Bool("sendFilename", true, "send original file name to YouTube")
+type arrayFlags []string
 
-	// this is set by compile-time to match git tag
-	appVersion string = "unknown"
-)
+// String is an implementation of the flag.Value interface
+func (i *arrayFlags) String() string {
+	return fmt.Sprintf("%v", *i)
+}
+
+// Set is an implementation of the flag.Value interface
+func (i *arrayFlags) Set(value string) error {
+	*i = append(*i, value)
+	return nil
+}
 
 func main() {
 
 	var err error
+
+	var playlistIDs arrayFlags
+
+	flag.Var(&playlistIDs, "playlistID", "playlist ID to add the video to. Can be used multiple times")
+	filename := flag.String("filename", "", "video filename. Can be a URL. Read from stdin with '-'")
+	thumbnail := flag.String("thumbnail", "", "thumbnail filename. Can be a URL")
+	caption := flag.String("caption", "", "caption filename. Can be a URL")
+	title := flag.String("title", "", "video title")
+	description := flag.String("description", "uploaded by youtubeuploader", "video description")
+	language := flag.String("language", "en", "video language")
+	categoryId := flag.String("categoryId", "", "video category Id")
+	tags := flag.String("tags", "", "comma separated list of video tags")
+	privacy := flag.String("privacy", "private", "video privacy status")
+	quiet := flag.Bool("quiet", false, "suppress progress indicator")
+	rateLimit := flag.Int("ratelimit", 0, "rate limit upload in Kbps. No limit by default")
+	metaJSON := flag.String("metaJSON", "", "JSON file containing title,description,tags etc (optional)")
+	metaJSONout := flag.String("metaJSONout", "", "filename to write uploaded video metadata into (optional)")
+	limitBetween := flag.String("limitBetween", "", "only rate limit between these times e.g. 10:00-14:00 (local time zone)")
+	oAuthPort := flag.Int("oAuthPort", 8080, "TCP port to listen on when requesting an oAuth token")
+	showAppVersion := flag.Bool("version", false, "show version")
+	chunksize := flag.Int("chunksize", googleapi.DefaultUploadChunkSize, "size (in bytes) of each upload chunk. A zero value will cause all data to be uploaded in a single request")
+	notifySubscribers := flag.Bool("notify", true, "notify channel subscribers of new video. Specify '-notify:=false' to disable.")
+	debug := flag.Bool("debug", false, "turn on verbose log output")
+	sendFileName := flag.Bool("sendFilename", true, "send original file name to YouTube")
+
+	// this is set by compile-time to match git tag
+	appVersion := "unknown"
 
 	flag.Parse()
 	config := yt.Config{
@@ -83,6 +97,7 @@ func main() {
 		Chunksize:         *chunksize,
 		NotifySubscribers: *notifySubscribers,
 		SendFileName:      *sendFileName,
+		PlaylistIDs:       playlistIDs,
 	}
 
 	config.Logger = utils.NewLogger(*debug)

@@ -89,6 +89,8 @@ Usage:
         notify channel subscribers of new video. Specify '-notify=false' to disable. (default true)
   -oAuthPort int
         TCP port to listen on when requesting an oAuth token (default 8080)
+  -playlistID value
+        playlistID to add the video to. Can be used multiple times
   -privacy string
         video privacy status (default "private")
   -quiet

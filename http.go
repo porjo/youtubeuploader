@@ -44,8 +44,6 @@ type VideoMeta struct {
 	// recording details
 	RecordingDate Date `json:"recordingDate,omitempty"`
 
-	// PlaylistID is deprecated in favour of PlaylistIDs
-	PlaylistID     string   `json:"playlistId,omitempty"`
 	PlaylistIDs    []string `json:"playlistIds,omitempty"`
 	PlaylistTitles []string `json:"playlistTitles,omitempty"`
 

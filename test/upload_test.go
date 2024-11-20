@@ -125,6 +125,7 @@ func TestMain(m *testing.M) {
 	//config.Logger = utils.NewLogger(true)
 	config.Logger = utils.NewLogger(false)
 	config.Filename = "test.mp4"
+	config.PlaylistIDs = []string{"xxxx", "yyyy"}
 
 	ret := m.Run()
 
