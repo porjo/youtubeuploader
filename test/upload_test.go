@@ -20,6 +20,9 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"log/slog"
+	"mime"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -50,6 +53,10 @@ var (
 
 	config    yt.Config
 	transport *mockTransport
+
+	recordingDate yt.Date
+
+	logger *slog.Logger
 )
 
 type mockTransport struct {
@@ -62,7 +69,7 @@ type mockReader struct {
 }
 
 func (m *mockTransport) RoundTrip(r *http.Request) (*http.Response, error) {
-	fmt.Printf("%s URL %s\n", r.Method, r.URL.String())
+	logger.Info("roundtrip", "method", r.Method, "URL", r.URL.String())
 	r.URL.Scheme = m.url.Scheme
 	r.URL.Host = m.url.Host
 
@@ -87,16 +94,26 @@ func (m *mockReader) Read(p []byte) (int, error) {
 
 func TestMain(m *testing.M) {
 
+	logger = slog.Default()
+
 	testServer = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		// be sure to read the request body otherwise the client gets confused
-		_, err := io.Copy(io.Discard, r.Body)
+		l := logger.With("src", "httptest")
+
+		video, err := handleVideoPost(r, l)
 		if err != nil {
-			log.Printf("Error reading body: %v", err)
-			http.Error(w, "can't read body", http.StatusBadRequest)
-			return
+			http.Error(w, err.Error(), http.StatusBadRequest)
 		}
-		//		log.Printf("Mock server: request body length %d", len(body))
+
+		if video != nil {
+			recDateIn, err := time.Parse(time.RFC3339Nano, video.RecordingDetails.RecordingDate)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+			}
+			if recDateIn.Equal(recordingDate.Time) {
+				http.Error(w, "Date didn't match", http.StatusBadRequest)
+			}
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 		switch r.Host {
@@ -110,7 +127,6 @@ func TestMain(m *testing.M) {
 				}
 				videoJ, err := json.Marshal(video)
 				if err != nil {
-					fmt.Printf("json marshall error %s\n", err)
 					http.Error(w, err.Error(), http.StatusInternalServerError)
 					return
 				}
@@ -133,7 +149,6 @@ func TestMain(m *testing.M) {
 				}
 				playlistJ, err := json.Marshal(playlistResponse)
 				if err != nil {
-					fmt.Printf("json marshall error %s\n", err)
 					http.Error(w, err.Error(), http.StatusInternalServerError)
 					return
 				}
@@ -158,6 +173,9 @@ func TestMain(m *testing.M) {
 	config.Logger = utils.NewLogger(false)
 	config.Filename = "test.mp4"
 	config.PlaylistIDs = []string{"xxxx", "yyyy"}
+	recordingDate = yt.Date{}
+	recordingDate.Time = time.Now()
+	config.RecordingDate = recordingDate
 
 	ret := m.Run()
 
@@ -197,4 +215,69 @@ func TestRateLimit(t *testing.T) {
 		t.Fatalf("run time took longer/shorter than expected: %s", runTimeGot)
 	}
 
+}
+
+func handleVideoPost(r *http.Request, l *slog.Logger) (*youtube.Video, error) {
+
+	if r.Method != http.MethodPost {
+		l.Info("not POST, skipping")
+		return nil, nil
+	}
+	// Parse the Content-Type header
+	contentType := r.Header.Get("Content-Type")
+	if contentType == "" {
+		return nil, fmt.Errorf("Missing Content-Type header")
+	}
+
+	// Parse the media type and boundary
+	mediaType, params, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		return nil, err
+	}
+
+	if mediaType != "multipart/related" {
+		l.Info("not multipart, skipping")
+		return nil, nil
+	}
+
+	boundary, ok := params["boundary"]
+	if !ok {
+		return nil, fmt.Errorf("Missing boundary parameter")
+	}
+
+	// Parse the multipart form
+	mr := multipart.NewReader(r.Body, boundary)
+
+	video := &youtube.Video{}
+
+	// Iterate through the parts
+	for {
+		part, err := mr.NextPart()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+
+		contentType := part.Header.Get("Content-Type")
+		switch contentType {
+		case "application/json":
+			// Parse JSON part
+			err := json.NewDecoder(part).Decode(video)
+			if err != nil {
+				return nil, err
+			}
+		case "application/octet-stream":
+			// Read binary data part
+			_, err = io.Copy(io.Discard, part)
+			if err != nil {
+				return nil, err
+			}
+		default:
+			// Ignore other content types
+		}
+	}
+
+	return video, nil
 }
