@@ -61,6 +61,7 @@ type Config struct {
 	Chunksize         int
 	NotifySubscribers bool
 	SendFileName      bool
+	RecordingDate     Date
 
 	Logger utils.Logger
 }
@@ -178,6 +179,10 @@ func LoadVideoMeta(config Config, video *youtube.Video) (*VideoMeta, error) {
 		video.Snippet.DefaultAudioLanguage = config.Language
 	}
 
+	if video.RecordingDetails.RecordingDate == "" && !config.RecordingDate.IsZero() {
+		video.RecordingDetails.RecordingDate = config.RecordingDate.UTC().Format(ytDateLayout)
+	}
+
 	// combine cli flag playistIDs and metaJSON playlistIDs. Remove any duplicates
 	playlistIDs := slices.Concat(config.PlaylistIDs, videoMeta.PlaylistIDs)
 	slices.Sort(playlistIDs)
@@ -261,6 +266,16 @@ func Open(filename string, mediaType MediaType) (io.ReadCloser, int, error) {
 func (d *Date) UnmarshalJSON(b []byte) (err error) {
 	s := string(b)
 	s = s[1 : len(s)-1]
+	err = d.parse(s)
+	return
+}
+
+func (d *Date) Set(s string) (err error) {
+	err = d.parse(s)
+	return
+}
+
+func (d *Date) parse(s string) (err error) {
 	// support ISO 8601 date only, and date + time
 	if strings.ContainsAny(s, ":") {
 		d.Time, err = time.Parse(inputDatetimeLayout, s)

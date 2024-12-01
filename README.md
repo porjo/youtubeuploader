@@ -97,6 +97,8 @@ Usage:
         suppress progress indicator
   -ratelimit int
         rate limit upload in Kbps. No limit by default
+  -recordingDate value
+        recording date e.g. 2024-11-23
   -secrets string
         Client Secrets configuration (default "client_secrets.json")
   -sendFilename
@@ -139,7 +141,7 @@ Video title, description etc can specified via the command line flags or via a J
 - all fields are optional
 - use `\n` in the description to insert newlines
 - times can be provided in one of two formats: `yyyy-mm-dd` (UTC) or `yyyy-mm-ddThh:mm:ss+zz:zz`
-- any values supplied via command line will take precedence
+- any values supplied via `-metaJSON` will take precedence over flags
 
 ## Credit
 

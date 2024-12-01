@@ -53,8 +53,11 @@ func main() {
 	var err error
 
 	var playlistIDs arrayFlags
+	var recordingDate yt.Date
 
 	flag.Var(&playlistIDs, "playlistID", "playlist ID to add the video to. Can be used multiple times")
+	flag.Var(&recordingDate, "recordingDate", "recording date e.g. 2024-11-23")
+
 	filename := flag.String("filename", "", "video filename. Can be a URL. Read from stdin with '-'")
 	thumbnail := flag.String("thumbnail", "", "thumbnail filename. Can be a URL")
 	caption := flag.String("caption", "", "caption filename. Can be a URL")
@@ -98,6 +101,7 @@ func main() {
 		NotifySubscribers: *notifySubscribers,
 		SendFileName:      *sendFileName,
 		PlaylistIDs:       playlistIDs,
+		RecordingDate:     recordingDate,
 	}
 
 	config.Logger = utils.NewLogger(*debug)
