@@ -3,7 +3,7 @@ before:
   hooks:
     - go mod tidy
     - sh -c "curl https://github.com/porjo.gpg | gpg --import"
-    - git verify-tag {{.Version}}
+    - git verify-tag {{.Tag}}
 builds:
   - env:
     - CGO_ENABLED=0
