@@ -132,7 +132,7 @@ Video title, description etc can specified via the command line flags or via a J
   "publicStatsViewable": true,
   "publishAt": "2017-06-01T12:05:00+02:00",
   "categoryId": "10",
-  "recordingdate": "2017-05-21",
+  "recordingDate": "2017-05-21",
   "playlistIds":  ["xxxxxxxxxxxxxxxxxx", "yyyyyyyyyyyyyyyyyy"],
   "playlistTitles":  ["my test playlist"],
   "language":  "fr"
