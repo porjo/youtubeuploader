@@ -21,7 +21,7 @@ Talking to the Youtube API requires oauth2 authentication. As such, you must:
 1. Create a new project for this app
 1. Enable the Youtube API (APIs & Services -> Enable APIs and Services -> Click 'ENABLE APIS AND SERVICES' top right). Select 'YouTube Data API v3'
 1. Create OAuth consent screen (APIs & Services -> OAuth Consent Screen)
-   - Add a test user. This can be any Google User account but it should correspond with the Youtube account where videos will be uploaded.
+   - Add a test user in "Audience -> Test users". This can be any Google User account but it should correspond with the Youtube account where videos will be uploaded.
 1. Create Credentials (APIs & Services -> Credentials -> click 'CREATE CREDENTIALS'), select 'OAuth client ID', select 'Web application'
    - Add an 'Authorized redirect URI' of 'http://localhost:8080/oauth2callback'
 1. Download the client secrets JSON file (click download icon next to newly created client ID) and save it as file `client_secrets.json` in the same directory as the utility e.g.
@@ -132,7 +132,7 @@ Video title, description etc can specified via the command line flags or via a J
   "publicStatsViewable": true,
   "publishAt": "2017-06-01T12:05:00+02:00",
   "categoryId": "10",
-  "recordingdate": "2017-05-21",
+  "recordingDate": "2017-05-21",
   "playlistIds":  ["xxxxxxxxxxxxxxxxxx", "yyyyyyyyyyyyyyyyyy"],
   "playlistTitles":  ["my test playlist"],
   "language":  "fr"
