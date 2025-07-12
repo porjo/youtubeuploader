@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httputil"
 	"strings"
@@ -80,6 +81,7 @@ func (lc *limitChecker) Read(p []byte) (int, error) {
 	if lc.rateLimit > 0 {
 		if lc.limiter == nil {
 			lc.burstLimit = len(p)
+			slog.Debug("limiter: creating limiter", "burstlimit", lc.burstLimit, "ratelimit", lc.rateLimit)
 
 			// token bucket
 			// - starts full and is refilled at the specified rate (tokens per second)
@@ -107,25 +109,26 @@ func (lc *limitChecker) Read(p []byte) (int, error) {
 		}
 	}
 
-	read, err := lc.ReadCloser.Read(p)
-	if err != nil {
-		return read, err
-	}
-
 	if limit {
 
-		tokens := read
+		tokens := len(p)
 
 		// tokens cannot exceed size of bucket (burst limit)
 		if tokens > lc.burstLimit {
+			slog.Debug("limiter: adjusting tokens to match burst limit", "tokens", tokens, "burst limit", lc.burstLimit)
 			tokens = lc.burstLimit
 		}
 
-		err = lc.limiter.WaitN(context.Background(), tokens)
+		err := lc.limiter.WaitN(context.Background(), tokens)
 		if err != nil {
-			return read, err
+			return 0, err
 		}
 
+	}
+
+	read, err := lc.ReadCloser.Read(p)
+	if err != nil {
+		return read, err
 	}
 
 	lc.status.Bytes += read
