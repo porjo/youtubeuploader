@@ -25,7 +25,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/porjo/youtubeuploader/internal/utils"
 	"golang.org/x/time/rate"
 )
 
@@ -36,8 +35,6 @@ type LimitTransport struct {
 	readerInit bool
 	filesize   int
 	rateLimit  int
-
-	logger utils.Logger
 }
 
 type LimitRange struct {
@@ -183,14 +180,13 @@ func ParseLimitBetween(between, inputTimeLayout string) (LimitRange, error) {
 	return lr, nil
 }
 
-func NewLimitTransport(logger utils.Logger, rt http.RoundTripper, lr LimitRange, filesize int, ratelimit int) (*LimitTransport, error) {
+func NewLimitTransport(rt http.RoundTripper, lr LimitRange, filesize int, ratelimit int) (*LimitTransport, error) {
 
 	if rt == nil {
 		return nil, fmt.Errorf("roundtripper can't be nil")
 	}
 
 	lt := &LimitTransport{
-		logger:     logger,
 		transport:  rt,
 		limitRange: lr,
 		filesize:   filesize,
@@ -237,19 +233,19 @@ func (t *LimitTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 	}
 
 	if contentType != "" {
-		t.logger.Debugf("Content-Type header value %q\n", contentType)
+		slog.Debug("content-Type header", "value", contentType)
 	}
-	t.logger.Debugf("Requesting URL %q\n", r.URL)
+	slog.Debug("requesting URL", "url", r.URL)
 
 	resp, err := t.transport.RoundTrip(r)
 	if err == nil {
-		t.logger.Debugf("Response status code: %d\n", resp.StatusCode)
+		slog.Debug("response status", "code", resp.StatusCode)
 		if resp.Body != nil {
 			respBytes, err := httputil.DumpResponse(resp, true)
 			if err != nil {
-				t.logger.Debugf("Error reading response: %s\n", err)
+				slog.Debug("error reading response", "err", err)
 			} else {
-				t.logger.Debugf("response dump:\n%s", respBytes)
+				slog.Debug("response dump", "response", respBytes)
 			}
 		}
 	}

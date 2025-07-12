@@ -33,7 +33,6 @@ import (
 
 	yt "github.com/porjo/youtubeuploader"
 	"github.com/porjo/youtubeuploader/internal/limiter"
-	"github.com/porjo/youtubeuploader/internal/utils"
 	"google.golang.org/api/youtube/v3"
 )
 
@@ -55,8 +54,6 @@ var (
 	transport *mockTransport
 
 	recordingDate yt.Date
-
-	logger *slog.Logger
 )
 
 type mockTransport struct {
@@ -69,7 +66,7 @@ type mockReader struct {
 }
 
 func (m *mockTransport) RoundTrip(r *http.Request) (*http.Response, error) {
-	logger.Info("roundtrip", "method", r.Method, "URL", r.URL.String())
+	slog.Info("roundtrip", "method", r.Method, "URL", r.URL.String())
 	r.URL.Scheme = m.url.Scheme
 	r.URL.Host = m.url.Host
 
@@ -94,7 +91,7 @@ func (m *mockReader) Read(p []byte) (int, error) {
 
 func TestMain(m *testing.M) {
 
-	logger = slog.Default()
+	logger := slog.Default()
 
 	testServer = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
@@ -169,8 +166,6 @@ func TestMain(m *testing.M) {
 	transport = &mockTransport{url: url}
 
 	config = yt.Config{}
-	//config.Logger = utils.NewLogger(true)
-	config.Logger = utils.NewLogger(false)
 	config.Filename = "test.mp4"
 	config.PlaylistIDs = []string{"xxxx", "yyyy"}
 	recordingDate = yt.Date{}
@@ -191,7 +186,7 @@ func TestRateLimit(t *testing.T) {
 	t.Logf("File size %d bytes", fileSize)
 	t.Logf("Ratelimit %d Kbps", rateLimit)
 
-	transport, err := limiter.NewLimitTransport(config.Logger, transport, limiter.LimitRange{}, fileSize, rateLimit)
+	transport, err := limiter.NewLimitTransport(transport, limiter.LimitRange{}, fileSize, rateLimit)
 	if err != nil {
 		t.Fatal(err)
 	}

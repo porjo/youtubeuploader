@@ -25,7 +25,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/porjo/youtubeuploader/internal/utils"
 	"google.golang.org/api/youtube/v3"
 )
 
@@ -62,8 +61,6 @@ type Config struct {
 	NotifySubscribers bool
 	SendFileName      bool
 	RecordingDate     Date
-
-	Logger utils.Logger
 }
 
 type MediaType int
