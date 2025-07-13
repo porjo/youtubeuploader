@@ -114,11 +114,10 @@ func main() {
 	logger := slog.New(slog.NewTextHandler(os.Stderr, so))
 	slog.SetDefault(logger)
 
+	slog.Debug("youtubeuploader version", "version", appVersion)
 	if config.ShowAppVersion {
-		fmt.Printf("youtubeuploader version: %s\n", appVersion)
+		// exit immediatly after showing version
 		os.Exit(0)
-	} else {
-		slog.Debug("youtubeuploader version", "version", appVersion)
 	}
 
 	if config.Filename == "" {

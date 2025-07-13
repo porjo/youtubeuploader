@@ -28,12 +28,16 @@ import (
 	"golang.org/x/time/rate"
 )
 
+const (
+	kbps2bpsMultiplier = 125 // kbps * 125 = bytes/s
+)
+
 type LimitTransport struct {
 	transport  http.RoundTripper
 	limitRange LimitRange
 	reader     limitChecker
 	readerInit bool
-	filesize   int
+	filesize   int64
 	rateLimit  int
 }
 
@@ -51,12 +55,14 @@ type limitChecker struct {
 	status     Status
 	rateLimit  int
 	burstLimit int
+
+	ctx context.Context
 }
 
 type Status struct {
 	AvgRate    int // Bytes per second
-	Bytes      int
-	TotalBytes int
+	Bytes      int64
+	TotalBytes int64
 
 	Progress string
 
@@ -77,15 +83,18 @@ func (lc *limitChecker) Read(p []byte) (int, error) {
 
 	if lc.rateLimit > 0 {
 		if lc.limiter == nil {
+
+			// FIXME: setting burst limit to initial buffer size seems about right,
+			// but is there a better value?
 			lc.burstLimit = len(p)
+
 			slog.Debug("limiter: creating limiter", "burstlimit", lc.burstLimit, "ratelimit", lc.rateLimit)
 
 			// token bucket
 			// - starts full and is refilled at the specified rate (tokens per second)
 			// - can burst (empty bucket) up to bucket size (burst limit)
 
-			// kbps * 125 = bytes/s
-			lc.limiter = rate.NewLimiter(rate.Limit(lc.rateLimit*125), lc.burstLimit)
+			lc.limiter = rate.NewLimiter(rate.Limit(lc.rateLimit*kbps2bpsMultiplier), lc.burstLimit)
 		}
 
 		if lc.limitRange.start.IsZero() || lc.limitRange.end.IsZero() {
@@ -108,15 +117,15 @@ func (lc *limitChecker) Read(p []byte) (int, error) {
 
 	if limit {
 
-		tokens := len(p)
-
-		// tokens cannot exceed size of bucket (burst limit)
-		if tokens > lc.burstLimit {
-			slog.Debug("limiter: adjusting tokens to match burst limit", "tokens", tokens, "burst limit", lc.burstLimit)
-			tokens = lc.burstLimit
+		// tokens cannot exceed burst limit
+		if len(p) > lc.burstLimit {
+			slog.Debug("limiter: adjusting read buffer to match burst limit", "buf size", len(p), "burst limit", lc.burstLimit)
+			p = p[:lc.burstLimit]
 		}
 
-		err := lc.limiter.WaitN(context.Background(), tokens)
+		tokens := len(p)
+
+		err := lc.limiter.WaitN(lc.ctx, tokens)
 		if err != nil {
 			return 0, err
 		}
@@ -128,7 +137,7 @@ func (lc *limitChecker) Read(p []byte) (int, error) {
 		return read, err
 	}
 
-	lc.status.Bytes += read
+	lc.status.Bytes += int64(read)
 
 	if lc.status.TotalBytes > 0 {
 		// bytes read may be greater than filesize due to MIME multipart headers in body. Reset to filesize
@@ -180,7 +189,7 @@ func ParseLimitBetween(between, inputTimeLayout string) (LimitRange, error) {
 	return lr, nil
 }
 
-func NewLimitTransport(rt http.RoundTripper, lr LimitRange, filesize int, ratelimit int) (*LimitTransport, error) {
+func NewLimitTransport(rt http.RoundTripper, lr LimitRange, filesize int64, ratelimit int) (*LimitTransport, error) {
 
 	if rt == nil {
 		return nil, fmt.Errorf("roundtripper can't be nil")
@@ -215,6 +224,7 @@ func (t *LimitTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 
 		t.reader.Lock()
 		if !t.readerInit {
+			t.reader.ctx = r.Context()
 			t.reader.limitRange = t.limitRange
 			t.reader.rateLimit = t.rateLimit
 			t.reader.status.TotalBytes = t.filesize

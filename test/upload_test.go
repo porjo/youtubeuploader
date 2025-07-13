@@ -37,7 +37,7 @@ import (
 )
 
 const (
-	fileSize int = 1e7 // 10MB
+	fileSize int64 = 1e7 // 10MB
 
 	oAuthResponse = `{
 		"access_token": "xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
@@ -61,8 +61,8 @@ type mockTransport struct {
 }
 
 type mockReader struct {
-	read     int
-	fileSize int
+	read     int64
+	fileSize int64
 }
 
 func (m *mockTransport) RoundTrip(r *http.Request) (*http.Response, error) {
@@ -80,12 +80,12 @@ func (m *mockReader) Close() error {
 func (m *mockReader) Read(p []byte) (int, error) {
 
 	l := len(p)
-	if m.read+l >= m.fileSize {
+	if m.read+int64(l) >= m.fileSize {
 		diff := m.fileSize - m.read
 		m.read += diff
-		return diff, io.EOF
+		return int(diff), io.EOF
 	}
-	m.read += l
+	m.read += int64(l)
 	return l, nil
 }
 
@@ -181,7 +181,7 @@ func TestRateLimit(t *testing.T) {
 
 	runTimeWant := 2
 
-	rateLimit := int(fileSize / 125 / runTimeWant)
+	rateLimit := int(fileSize / 125 / int64(runTimeWant))
 
 	t.Logf("File size %d bytes", fileSize)
 	t.Logf("Ratelimit %d Kbps", rateLimit)
