@@ -30,6 +30,7 @@ import (
 
 const (
 	kbps2bpsMultiplier = 125 // kbps * 125 = bytes/s
+	defaultBurstLimit  = 16 * 1024
 )
 
 type LimitTransport struct {
@@ -84,11 +85,9 @@ func (lc *limitChecker) Read(p []byte) (int, error) {
 	if lc.rateLimit > 0 {
 		if lc.limiter == nil {
 
-			// FIXME: setting burst limit to initial buffer size seems about right,
-			// but is there a better value?
-			lc.burstLimit = len(p)
+			lc.burstLimit = defaultBurstLimit
 
-			slog.Debug("limiter: creating limiter", "burstlimit", lc.burstLimit, "ratelimit", lc.rateLimit)
+			slog.Debug("limiter: creating limiter", "burstlimit", lc.burstLimit, "ratelimit", lc.rateLimit, "initial buf len", len(p))
 
 			// token bucket
 			// - starts full and is refilled at the specified rate (tokens per second)
