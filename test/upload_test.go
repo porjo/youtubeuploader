@@ -33,12 +33,11 @@ import (
 
 	yt "github.com/porjo/youtubeuploader"
 	"github.com/porjo/youtubeuploader/internal/limiter"
-	"github.com/porjo/youtubeuploader/internal/utils"
 	"google.golang.org/api/youtube/v3"
 )
 
 const (
-	fileSize int = 1e7 // 10MB
+	fileSize int64 = 1e7 // 10MB
 
 	oAuthResponse = `{
 		"access_token": "xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
@@ -55,8 +54,6 @@ var (
 	transport *mockTransport
 
 	recordingDate yt.Date
-
-	logger *slog.Logger
 )
 
 type mockTransport struct {
@@ -64,12 +61,12 @@ type mockTransport struct {
 }
 
 type mockReader struct {
-	read     int
-	fileSize int
+	read     int64
+	fileSize int64
 }
 
 func (m *mockTransport) RoundTrip(r *http.Request) (*http.Response, error) {
-	logger.Info("roundtrip", "method", r.Method, "URL", r.URL.String())
+	slog.Info("roundtrip", "method", r.Method, "URL", r.URL.String())
 	r.URL.Scheme = m.url.Scheme
 	r.URL.Host = m.url.Host
 
@@ -83,18 +80,18 @@ func (m *mockReader) Close() error {
 func (m *mockReader) Read(p []byte) (int, error) {
 
 	l := len(p)
-	if m.read+l >= m.fileSize {
+	if m.read+int64(l) >= m.fileSize {
 		diff := m.fileSize - m.read
 		m.read += diff
-		return diff, io.EOF
+		return int(diff), io.EOF
 	}
-	m.read += l
+	m.read += int64(l)
 	return l, nil
 }
 
 func TestMain(m *testing.M) {
 
-	logger = slog.Default()
+	logger := slog.Default()
 
 	testServer = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
@@ -169,8 +166,6 @@ func TestMain(m *testing.M) {
 	transport = &mockTransport{url: url}
 
 	config = yt.Config{}
-	//config.Logger = utils.NewLogger(true)
-	config.Logger = utils.NewLogger(false)
 	config.Filename = "test.mp4"
 	config.PlaylistIDs = []string{"xxxx", "yyyy"}
 	recordingDate = yt.Date{}
@@ -186,12 +181,12 @@ func TestRateLimit(t *testing.T) {
 
 	runTimeWant := 2
 
-	rateLimit := int(fileSize / 125 / runTimeWant)
+	rateLimit := int(fileSize / 125 / int64(runTimeWant))
 
 	t.Logf("File size %d bytes", fileSize)
 	t.Logf("Ratelimit %d Kbps", rateLimit)
 
-	transport, err := limiter.NewLimitTransport(config.Logger, transport, limiter.LimitRange{}, fileSize, rateLimit)
+	transport, err := limiter.NewLimitTransport(transport, limiter.LimitRange{}, fileSize, rateLimit)
 	if err != nil {
 		t.Fatal(err)
 	}

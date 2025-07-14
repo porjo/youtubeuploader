@@ -19,6 +19,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -26,7 +27,6 @@ import (
 
 	yt "github.com/porjo/youtubeuploader"
 	"github.com/porjo/youtubeuploader/internal/limiter"
-	"github.com/porjo/youtubeuploader/internal/utils"
 	"google.golang.org/api/googleapi"
 )
 
@@ -104,12 +104,19 @@ func main() {
 		RecordingDate:     recordingDate,
 	}
 
-	config.Logger = utils.NewLogger(*debug)
+	// setup logging
+	programLevel := new(slog.LevelVar) // Info by default
+	so := &slog.HandlerOptions{Level: programLevel}
+	if *debug {
+		//so.AddSource = true
+		programLevel.Set(slog.LevelDebug)
+	}
+	logger := slog.New(slog.NewTextHandler(os.Stderr, so))
+	slog.SetDefault(logger)
 
-	config.Logger.Debugf("Youtubeuploader version: %s\n", appVersion)
-
+	slog.Debug("youtubeuploader version", "version", appVersion)
 	if config.ShowAppVersion {
-		fmt.Printf("Youtubeuploader version: %s\n", appVersion)
+		// exit immediatly after showing version
 		os.Exit(0)
 	}
 
@@ -142,7 +149,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	transport, err := limiter.NewLimitTransport(config.Logger, http.DefaultTransport, limitRange, filesize, config.RateLimit)
+	transport, err := limiter.NewLimitTransport(http.DefaultTransport, limitRange, filesize, config.RateLimit)
 	if err != nil {
 		log.Fatal(err)
 	}

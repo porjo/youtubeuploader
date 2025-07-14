@@ -25,7 +25,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/porjo/youtubeuploader/internal/utils"
 	"google.golang.org/api/youtube/v3"
 )
 
@@ -62,8 +61,6 @@ type Config struct {
 	NotifySubscribers bool
 	SendFileName      bool
 	RecordingDate     Date
-
-	Logger utils.Logger
 }
 
 type MediaType int
@@ -191,7 +188,7 @@ func LoadVideoMeta(config Config, video *youtube.Video) (*VideoMeta, error) {
 	return videoMeta, nil
 }
 
-func Open(filename string, mediaType MediaType) (io.ReadCloser, int, error) {
+func Open(filename string, mediaType MediaType) (io.ReadCloser, int64, error) {
 	var reader io.ReadCloser
 	var filesize int64
 	var err error
@@ -205,7 +202,7 @@ func Open(filename string, mediaType MediaType) (io.ReadCloser, int, error) {
 		if lenStr != "" {
 			filesize, err = strconv.ParseInt(lenStr, 10, 64)
 			if err != nil {
-				return reader, int(filesize), err
+				return reader, filesize, err
 			}
 		}
 
@@ -260,7 +257,7 @@ func Open(filename string, mediaType MediaType) (io.ReadCloser, int, error) {
 		filesize = fileInfo.Size()
 
 	}
-	return reader, int(filesize), err
+	return reader, filesize, err
 }
 
 func (d *Date) UnmarshalJSON(b []byte) (err error) {

@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -117,7 +118,7 @@ func Run(ctx context.Context, transport *limiter.LimitTransport, config Config, 
 	call := service.Videos.Insert([]string{"snippet", "status", "recordingDetails"}, upload)
 	if config.SendFileName && config.Filename != "-" {
 		filetitle := filepath.Base(config.Filename)
-		config.Logger.Debugf("Adding file name to request: %q\n", filetitle)
+		slog.Debug("adding file name to request", "file", filetitle)
 		call.Header().Set("Slug", filetitle)
 	}
 	video, err = call.NotifySubscribers(config.NotifySubscribers).Media(videoReader, option).Do()

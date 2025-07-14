@@ -18,14 +18,19 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httputil"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/porjo/youtubeuploader/internal/utils"
 	"golang.org/x/time/rate"
+)
+
+const (
+	kbps2bpsMultiplier = 125 // kbps * 125 = bytes/s
+	defaultBurstLimit  = 16 * 1024
 )
 
 type LimitTransport struct {
@@ -33,10 +38,8 @@ type LimitTransport struct {
 	limitRange LimitRange
 	reader     limitChecker
 	readerInit bool
-	filesize   int
+	filesize   int64
 	rateLimit  int
-
-	logger utils.Logger
 }
 
 type LimitRange struct {
@@ -53,12 +56,14 @@ type limitChecker struct {
 	status     Status
 	rateLimit  int
 	burstLimit int
+
+	ctx context.Context
 }
 
 type Status struct {
 	AvgRate    int // Bytes per second
-	Bytes      int
-	TotalBytes int
+	Bytes      int64
+	TotalBytes int64
 
 	Progress string
 
@@ -79,14 +84,16 @@ func (lc *limitChecker) Read(p []byte) (int, error) {
 
 	if lc.rateLimit > 0 {
 		if lc.limiter == nil {
-			lc.burstLimit = len(p)
+
+			lc.burstLimit = defaultBurstLimit
+
+			slog.Debug("limiter: creating limiter", "burstlimit", lc.burstLimit, "ratelimit", lc.rateLimit, "initial buf len", len(p))
 
 			// token bucket
 			// - starts full and is refilled at the specified rate (tokens per second)
 			// - can burst (empty bucket) up to bucket size (burst limit)
 
-			// kbps * 125 = bytes/s
-			lc.limiter = rate.NewLimiter(rate.Limit(lc.rateLimit*125), lc.burstLimit)
+			lc.limiter = rate.NewLimiter(rate.Limit(lc.rateLimit*kbps2bpsMultiplier), lc.burstLimit)
 		}
 
 		if lc.limitRange.start.IsZero() || lc.limitRange.end.IsZero() {
@@ -107,28 +114,29 @@ func (lc *limitChecker) Read(p []byte) (int, error) {
 		}
 	}
 
+	if limit {
+
+		// tokens cannot exceed burst limit
+		if len(p) > lc.burstLimit {
+			slog.Debug("limiter: adjusting read buffer to match burst limit", "buf size", len(p), "burst limit", lc.burstLimit)
+			p = p[:lc.burstLimit]
+		}
+
+		tokens := len(p)
+
+		err := lc.limiter.WaitN(lc.ctx, tokens)
+		if err != nil {
+			return 0, err
+		}
+
+	}
+
 	read, err := lc.ReadCloser.Read(p)
 	if err != nil {
 		return read, err
 	}
 
-	if limit {
-
-		tokens := read
-
-		// tokens cannot exceed size of bucket (burst limit)
-		if tokens > lc.burstLimit {
-			tokens = lc.burstLimit
-		}
-
-		err = lc.limiter.WaitN(context.Background(), tokens)
-		if err != nil {
-			return read, err
-		}
-
-	}
-
-	lc.status.Bytes += read
+	lc.status.Bytes += int64(read)
 
 	if lc.status.TotalBytes > 0 {
 		// bytes read may be greater than filesize due to MIME multipart headers in body. Reset to filesize
@@ -180,14 +188,13 @@ func ParseLimitBetween(between, inputTimeLayout string) (LimitRange, error) {
 	return lr, nil
 }
 
-func NewLimitTransport(logger utils.Logger, rt http.RoundTripper, lr LimitRange, filesize int, ratelimit int) (*LimitTransport, error) {
+func NewLimitTransport(rt http.RoundTripper, lr LimitRange, filesize int64, ratelimit int) (*LimitTransport, error) {
 
 	if rt == nil {
 		return nil, fmt.Errorf("roundtripper can't be nil")
 	}
 
 	lt := &LimitTransport{
-		logger:     logger,
 		transport:  rt,
 		limitRange: lr,
 		filesize:   filesize,
@@ -216,6 +223,7 @@ func (t *LimitTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 
 		t.reader.Lock()
 		if !t.readerInit {
+			t.reader.ctx = r.Context()
 			t.reader.limitRange = t.limitRange
 			t.reader.rateLimit = t.rateLimit
 			t.reader.status.TotalBytes = t.filesize
@@ -234,19 +242,19 @@ func (t *LimitTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 	}
 
 	if contentType != "" {
-		t.logger.Debugf("Content-Type header value %q\n", contentType)
+		slog.Debug("content-Type header", "value", contentType)
 	}
-	t.logger.Debugf("Requesting URL %q\n", r.URL)
+	slog.Debug("requesting URL", "url", r.URL)
 
 	resp, err := t.transport.RoundTrip(r)
 	if err == nil {
-		t.logger.Debugf("Response status code: %d\n", resp.StatusCode)
+		slog.Debug("response status", "code", resp.StatusCode)
 		if resp.Body != nil {
 			respBytes, err := httputil.DumpResponse(resp, true)
 			if err != nil {
-				t.logger.Debugf("Error reading response: %s\n", err)
+				slog.Debug("error reading response", "err", err)
 			} else {
-				t.logger.Debugf("response dump:\n%s", respBytes)
+				slog.Debug("response dump", "response", respBytes)
 			}
 		}
 	}
