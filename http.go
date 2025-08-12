@@ -40,6 +40,7 @@ type VideoMeta struct {
 	PublicStatsViewable bool   `json:"publicStatsViewable,omitempty"`
 	PublishAt           Date   `json:"publishAt,omitempty"`
 	MadeForKids         bool   `json:"madeForKids,omitempty"`
+	ContainsSyntheticMedia *bool   `json:"containsSyntheticMedia,omitempty"`
 
 	// recording details
 	RecordingDate Date `json:"recordingDate,omitempty"`

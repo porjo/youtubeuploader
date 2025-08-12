@@ -212,6 +212,28 @@ func TestRateLimit(t *testing.T) {
 
 }
 
+func TestContainsSyntheticMedia(t *testing.T) {
+	url, err := url.Parse(testServer.URL)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	transport := &mockTransport{url: url}
+	limitTransport, err := limiter.NewLimitTransport(transport, limiter.LimitRange{}, fileSize, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	config.ContainsSyntheticMedia = true
+	ctx := context.Background()
+	videoReader := &mockReader{fileSize: fileSize}
+	defer videoReader.Close()
+
+	err = yt.Run(ctx, limitTransport, config, videoReader)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 func handleVideoPost(r *http.Request, l *slog.Logger) (*youtube.Video, error) {
 
 	if r.Method != http.MethodPost {

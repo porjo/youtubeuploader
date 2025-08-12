@@ -78,6 +78,7 @@ func main() {
 	notifySubscribers := flag.Bool("notify", true, "notify channel subscribers of new video. Specify '-notify:=false' to disable.")
 	debug := flag.Bool("debug", false, "turn on verbose log output")
 	sendFileName := flag.Bool("sendFilename", true, "send original file name to YouTube")
+	containsSyntheticMedia := flag.Bool("containsSyntheticMedia", false, "video contains synthetic media")
 
 	flag.Parse()
 	config := yt.Config{
@@ -102,6 +103,7 @@ func main() {
 		SendFileName:      *sendFileName,
 		PlaylistIDs:       playlistIDs,
 		RecordingDate:     recordingDate,
+		ContainsSyntheticMedia: *containsSyntheticMedia,
 	}
 
 	// setup logging

@@ -61,6 +61,7 @@ type Config struct {
 	NotifySubscribers bool
 	SendFileName      bool
 	RecordingDate     Date
+	ContainsSyntheticMedia bool
 }
 
 type MediaType int
@@ -79,7 +80,7 @@ func LoadVideoMeta(config Config, video *youtube.Video) (*VideoMeta, error) {
 	// Force send some boolean values.
 	// Without this, defaults on the Youtube side are used which can have unexpected results.
 	// See: https://github.com/porjo/youtubeuploader/issues/132
-	video.Status.ForceSendFields = []string{"SelfDeclaredMadeForKids"}
+	video.Status.ForceSendFields = []string{"SelfDeclaredMadeForKids", "ContainsSyntheticMedia"}
 
 	// attempt to load from meta JSON, otherwise use values specified from command line flags
 	if config.MetaJSON != "" {
@@ -129,13 +130,15 @@ func LoadVideoMeta(config Config, video *youtube.Video) (*VideoMeta, error) {
 		if videoMeta.PublicStatsViewable {
 			video.Status.PublicStatsViewable = videoMeta.PublicStatsViewable
 		}
+		if videoMeta.ContainsSyntheticMedia != nil {
+			video.Status.ContainsSyntheticMedia = *videoMeta.ContainsSyntheticMedia
+		}
 		if !videoMeta.PublishAt.IsZero() {
 			if video.Status.PrivacyStatus != "private" {
 				fmt.Printf("publishAt can only be used when privacyStatus is 'private'. Ignoring publishAt...\n")
 			} else {
 				if videoMeta.PublishAt.Before(time.Now()) {
 					fmt.Printf("publishAt (%s) was in the past!? Publishing now instead...\n", videoMeta.PublishAt)
-					video.Status.PublishAt = time.Now().UTC().Format(ytDateLayout)
 				} else {
 					video.Status.PublishAt = videoMeta.PublishAt.UTC().Format(ytDateLayout)
 				}
@@ -146,6 +149,10 @@ func LoadVideoMeta(config Config, video *youtube.Video) (*VideoMeta, error) {
 			video.Snippet.DefaultLanguage = videoMeta.Language
 			video.Snippet.DefaultAudioLanguage = videoMeta.Language
 		}
+	}
+
+	if config.ContainsSyntheticMedia {
+		video.Status.ContainsSyntheticMedia = true
 	}
 
 	if video.Status.PrivacyStatus == "" {
