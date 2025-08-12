@@ -69,8 +69,9 @@ type Date struct {
 	time.Time
 }
 
-func LoadVideoMeta(config Config, video *youtube.Video) (*VideoMeta, error) {
+func LoadVideoMeta(config Config) (*VideoMeta, *youtube.Video, error) {
 	videoMeta := &VideoMeta{}
+	video := &youtube.Video{}
 
 	video.Snippet = &youtube.VideoSnippet{}
 	video.RecordingDetails = &youtube.VideoRecordingDetails{}
@@ -86,19 +87,21 @@ func LoadVideoMeta(config Config, video *youtube.Video) (*VideoMeta, error) {
 		file, e := os.ReadFile(config.MetaJSON)
 		if e != nil {
 			e2 := fmt.Errorf("error reading file %q: %w", config.MetaJSON, e)
-			return nil, e2
+			return nil, nil, e2
 		}
 
 		e = json.Unmarshal(file, &videoMeta)
 		if e != nil {
 			e2 := fmt.Errorf("error parsing file %q: %w", config.MetaJSON, e)
-			return nil, e2
+			return nil, nil, e2
 		}
 
 		video.Snippet.Tags = videoMeta.Tags
 		video.Snippet.Title = videoMeta.Title
 		video.Snippet.Description = videoMeta.Description
 		video.Snippet.CategoryId = videoMeta.CategoryId
+		video.Localizations = videoMeta.Localizations
+
 		// Location has been deprecated by Google
 		// see: https://developers.google.com/youtube/v3/revision_history#release_notes_06_01_2017
 		/*
@@ -185,7 +188,7 @@ func LoadVideoMeta(config Config, video *youtube.Video) (*VideoMeta, error) {
 	slices.Sort(playlistIDs)
 	videoMeta.PlaylistIDs = slices.Compact(playlistIDs)
 
-	return videoMeta, nil
+	return videoMeta, video, nil
 }
 
 func Open(filename string, mediaType MediaType) (io.ReadCloser, int64, error) {
