@@ -50,6 +50,8 @@ type VideoMeta struct {
 
 	// BCP-47 language code e.g. 'en','es'
 	Language string `json:"language,omitempty"`
+
+	Localizations map[string]youtube.VideoLocalization `json:"localizations,omitempty"`
 }
 
 func playlistList(service *youtube.Service, pageToken string) (*youtube.PlaylistListResponse, error) {

@@ -92,9 +92,7 @@ func Run(ctx context.Context, transport *limiter.LimitTransport, config Config, 
 		return fmt.Errorf("error building OAuth client: %w", err)
 	}
 
-	upload := &youtube.Video{}
-
-	videoMeta, err := LoadVideoMeta(config, upload)
+	videoMeta, uploadVideo, err := LoadVideoMeta(config)
 	if err != nil {
 		return fmt.Errorf("error loading video meta data: %w", err)
 	}
@@ -111,28 +109,28 @@ func Run(ctx context.Context, transport *limiter.LimitTransport, config Config, 
 	}
 
 	var option googleapi.MediaOption
-	var video *youtube.Video
+	var resultVideo *youtube.Video
 
 	option = googleapi.ChunkSize(config.Chunksize)
 
-	call := service.Videos.Insert([]string{"snippet", "status", "recordingDetails"}, upload)
+	call := service.Videos.Insert([]string{"snippet", "status", "localizations", "recordingDetails"}, uploadVideo)
 	if config.SendFileName && config.Filename != "-" {
 		filetitle := filepath.Base(config.Filename)
 		slog.Debug("adding file name to request", "file", filetitle)
 		call.Header().Set("Slug", filetitle)
 	}
-	video, err = call.NotifySubscribers(config.NotifySubscribers).Media(videoReader, option).Do()
+	resultVideo, err = call.NotifySubscribers(config.NotifySubscribers).Media(videoReader, option).Do()
 	if err != nil {
-		if video != nil {
-			return fmt.Errorf("error making YouTube API call: %w, %v", err, video.HTTPStatusCode)
+		if resultVideo != nil {
+			return fmt.Errorf("error making YouTube API call: %w, %v", err, resultVideo.HTTPStatusCode)
 		} else {
 			return fmt.Errorf("error making YouTube API call: %w", err)
 		}
 	}
-	fmt.Printf("\nUpload successful! Video ID: %v\n", video.Id)
+	fmt.Printf("\nUpload successful! Video ID: %v\n", resultVideo.Id)
 
 	if config.MetaJSONOut != "" {
-		JSONOut, _ := json.Marshal(video)
+		JSONOut, _ := json.Marshal(resultVideo)
 		err = os.WriteFile(config.MetaJSONOut, JSONOut, 0666)
 		if err != nil {
 			return fmt.Errorf("error writing to video metadata file %q: %w", config.MetaJSONOut, err)
@@ -142,7 +140,7 @@ func Run(ctx context.Context, transport *limiter.LimitTransport, config Config, 
 
 	if thumbReader != nil {
 		fmt.Printf("Uploading thumbnail %q...\n", config.Thumbnail)
-		_, err = service.Thumbnails.Set(video.Id).Media(thumbReader).Do()
+		_, err = service.Thumbnails.Set(resultVideo.Id).Media(thumbReader).Do()
 		if err != nil {
 			return fmt.Errorf("error making YouTube API call: %w", err)
 		}
@@ -154,7 +152,7 @@ func Run(ctx context.Context, transport *limiter.LimitTransport, config Config, 
 		captionObj := &youtube.Caption{
 			Snippet: &youtube.CaptionSnippet{},
 		}
-		captionObj.Snippet.VideoId = video.Id
+		captionObj.Snippet.VideoId = resultVideo.Id
 		captionObj.Snippet.Language = config.Language
 		captionObj.Snippet.Name = config.Language
 		captionInsert := service.Captions.Insert([]string{"snippet"}, captionObj).Sync(true)
@@ -169,15 +167,15 @@ func Run(ctx context.Context, transport *limiter.LimitTransport, config Config, 
 	}
 
 	plx := &Playlistx{}
-	if upload.Status.PrivacyStatus != "" {
-		plx.PrivacyStatus = upload.Status.PrivacyStatus
+	if uploadVideo.Status.PrivacyStatus != "" {
+		plx.PrivacyStatus = uploadVideo.Status.PrivacyStatus
 	}
 
 	if len(videoMeta.PlaylistIDs) > 0 {
 		plx.Title = ""
 		for _, pid := range videoMeta.PlaylistIDs {
 			plx.Id = pid
-			err = plx.AddVideoToPlaylist(service, video.Id)
+			err = plx.AddVideoToPlaylist(service, resultVideo.Id)
 			if err != nil {
 				return fmt.Errorf("error adding video to playlist: %w", err)
 			}
@@ -188,7 +186,7 @@ func Run(ctx context.Context, transport *limiter.LimitTransport, config Config, 
 		plx.Id = ""
 		for _, title := range videoMeta.PlaylistTitles {
 			plx.Title = title
-			err = plx.AddVideoToPlaylist(service, video.Id)
+			err = plx.AddVideoToPlaylist(service, resultVideo.Id)
 			if err != nil {
 				return fmt.Errorf("error adding video to playlist: %w", err)
 			}

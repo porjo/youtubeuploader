@@ -122,20 +122,38 @@ Video title, description etc can specified via the command line flags or via a J
 
 ```json
 {
-  "title": "my test title",
-  "description": "my test description",
-  "tags": ["test tag1", "test tag2"],
-  "privacyStatus": "private",
-  "madeForKids": false,
-  "embeddable": true,
-  "license": "creativeCommon",
-  "publicStatsViewable": true,
-  "publishAt": "2017-06-01T12:05:00+02:00",
-  "categoryId": "10",
-  "recordingDate": "2017-05-21",
-  "playlistIds":  ["xxxxxxxxxxxxxxxxxx", "yyyyyyyyyyyyyyyyyy"],
-  "playlistTitles":  ["my test playlist"],
-  "language":  "fr"
+      "title": "my test title",
+      "description": "my test description",
+      "tags": [
+            "test tag1",
+            "test tag2"
+      ],
+      "privacyStatus": "private",
+      "madeForKids": false,
+      "embeddable": true,
+      "license": "creativeCommon",
+      "publicStatsViewable": true,
+      "publishAt": "2017-06-01T12:05:00+02:00",
+      "categoryId": "10",
+      "recordingDate": "2017-05-21",
+      "playlistIds": [
+            "xxxxxxxxxxxxxxxxxx",
+            "yyyyyyyyyyyyyyyyyy"
+      ],
+      "playlistTitles": [
+            "my test playlist"
+      ],
+      "language": "fr",
+      "localizations": {
+            "en": {
+                  "title": "My English Title",
+                  "description": "My English description"
+            },
+            "it": {
+                  "title": "Il mio titolo in italiano",
+                  "description": "La mia descrizione in italiano"
+            }
+      }
 }
 ```
 - all fields are optional
