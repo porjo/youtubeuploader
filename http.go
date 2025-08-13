@@ -34,13 +34,13 @@ type VideoMeta struct {
 	Tags        []string `json:"tags,omitempty"`
 
 	// status
-	PrivacyStatus       string `json:"privacyStatus,omitempty"`
-	Embeddable          bool   `json:"embeddable,omitempty"`
-	License             string `json:"license,omitempty"`
-	PublicStatsViewable bool   `json:"publicStatsViewable,omitempty"`
-	PublishAt           Date   `json:"publishAt,omitempty"`
-	MadeForKids         bool   `json:"madeForKids,omitempty"`
-	ContainsSyntheticMedia *bool   `json:"containsSyntheticMedia,omitempty"`
+	PrivacyStatus          string `json:"privacyStatus,omitempty"`
+	Embeddable             bool   `json:"embeddable,omitempty"`
+	License                string `json:"license,omitempty"`
+	PublicStatsViewable    bool   `json:"publicStatsViewable,omitempty"`
+	PublishAt              Date   `json:"publishAt,omitempty"`
+	MadeForKids            bool   `json:"madeForKids,omitempty"`
+	ContainsSyntheticMedia bool   `json:"containsSyntheticMedia,omitempty"`
 
 	// recording details
 	RecordingDate Date `json:"recordingDate,omitempty"`

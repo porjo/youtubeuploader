@@ -61,7 +61,6 @@ type Config struct {
 	NotifySubscribers bool
 	SendFileName      bool
 	RecordingDate     Date
-	ContainsSyntheticMedia bool
 }
 
 type MediaType int
@@ -130,8 +129,8 @@ func LoadVideoMeta(config Config, video *youtube.Video) (*VideoMeta, error) {
 		if videoMeta.PublicStatsViewable {
 			video.Status.PublicStatsViewable = videoMeta.PublicStatsViewable
 		}
-		if videoMeta.ContainsSyntheticMedia != nil {
-			video.Status.ContainsSyntheticMedia = *videoMeta.ContainsSyntheticMedia
+		if videoMeta.ContainsSyntheticMedia {
+			video.Status.ContainsSyntheticMedia = true
 		}
 		if !videoMeta.PublishAt.IsZero() {
 			if video.Status.PrivacyStatus != "private" {
@@ -149,10 +148,6 @@ func LoadVideoMeta(config Config, video *youtube.Video) (*VideoMeta, error) {
 			video.Snippet.DefaultLanguage = videoMeta.Language
 			video.Snippet.DefaultAudioLanguage = videoMeta.Language
 		}
-	}
-
-	if config.ContainsSyntheticMedia {
-		video.Status.ContainsSyntheticMedia = true
 	}
 
 	if video.Status.PrivacyStatus == "" {
