@@ -153,7 +153,8 @@ Video title, description etc can specified via the command line flags or via a J
                   "title": "Il mio titolo in italiano",
                   "description": "La mia descrizione in italiano"
             }
-      }
+      },
+      "containsSyntheticMedia": false
 }
 ```
 - all fields are optional
