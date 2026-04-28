@@ -83,10 +83,21 @@ func Run(ctx context.Context, transport *limiter.LimitTransport, config Config, 
 	SetSignalNotify(signalChan)
 	go prog.Run(ctx, signalChan)
 
-	client, err := BuildOAuthHTTPClient(
+	secretsFile := config.OAuthSecretsFile
+	if secretsFile == "" {
+		secretsFile = *clientSecretsFile
+	}
+	cacheFile := config.OAuthCacheFile
+	if cacheFile == "" {
+		cacheFile = *cache
+	}
+
+	client, err := BuildOAuthHTTPClientWithFiles(
 		ctx,
 		[]string{youtube.YoutubeUploadScope, youtube.YoutubepartnerScope, youtube.YoutubeScope},
 		config.OAuthPort,
+		secretsFile,
+		cacheFile,
 	)
 	if err != nil {
 		return fmt.Errorf("error building OAuth client: %w", err)
@@ -122,9 +133,9 @@ func Run(ctx context.Context, transport *limiter.LimitTransport, config Config, 
 	resultVideo, err = call.NotifySubscribers(config.NotifySubscribers).Media(videoReader, option).Do()
 	if err != nil {
 		if resultVideo != nil {
-			return fmt.Errorf("error making YouTube API call: %w, %v", err, resultVideo.HTTPStatusCode)
+			return wrapUploadError(fmt.Errorf("%w, %v", err, resultVideo.HTTPStatusCode), "videos.insert")
 		} else {
-			return fmt.Errorf("error making YouTube API call: %w", err)
+			return wrapUploadError(err, "videos.insert")
 		}
 	}
 	fmt.Printf("\nUpload successful! Video ID: %v\n", resultVideo.Id)
@@ -142,7 +153,7 @@ func Run(ctx context.Context, transport *limiter.LimitTransport, config Config, 
 		fmt.Printf("Uploading thumbnail %q...\n", config.Thumbnail)
 		_, err = service.Thumbnails.Set(resultVideo.Id).Media(thumbReader).Do()
 		if err != nil {
-			return fmt.Errorf("error making YouTube API call: %w", err)
+			return wrapUploadError(err, "thumbnails.set")
 		}
 	}
 
@@ -159,9 +170,9 @@ func Run(ctx context.Context, transport *limiter.LimitTransport, config Config, 
 		captionRes, err := captionInsert.Media(captionReader).Do()
 		if err != nil {
 			if captionRes != nil {
-				return fmt.Errorf("error inserting caption: %w, %v", err, captionRes.HTTPStatusCode)
+				return wrapUploadError(fmt.Errorf("%w, %v", err, captionRes.HTTPStatusCode), "captions.insert")
 			} else {
-				return fmt.Errorf("error inserting caption: %w", err)
+				return wrapUploadError(err, "captions.insert")
 			}
 		}
 	}
@@ -177,7 +188,7 @@ func Run(ctx context.Context, transport *limiter.LimitTransport, config Config, 
 			plx.Id = pid
 			err = plx.AddVideoToPlaylist(service, resultVideo.Id)
 			if err != nil {
-				return fmt.Errorf("error adding video to playlist: %w", err)
+				return wrapUploadError(err, "playlistItems.insert")
 			}
 		}
 	}
@@ -188,7 +199,7 @@ func Run(ctx context.Context, transport *limiter.LimitTransport, config Config, 
 			plx.Title = title
 			err = plx.AddVideoToPlaylist(service, resultVideo.Id)
 			if err != nil {
-				return fmt.Errorf("error adding video to playlist: %w", err)
+				return wrapUploadError(err, "playlistItems.insert")
 			}
 		}
 	}

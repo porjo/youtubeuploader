@@ -56,6 +56,8 @@ type Config struct {
 	LimitBetween      string
 	PlaylistIDs       []string
 	OAuthPort         int
+	OAuthSecretsFile  string
+	OAuthCacheFile    string
 	ShowAppVersion    bool
 	Chunksize         int
 	NotifySubscribers bool
