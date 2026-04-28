@@ -91,10 +91,10 @@ type oAuthRootConfig struct {
 
 // readConfig reads the configuration from clientSecretsFile.
 // It returns an oauth configuration object for use with the Google API client.
-func readConfig(scopes []string) (*oauth2.Config, error) {
+func readConfig(scopes []string, secretsFile string) (*oauth2.Config, error) {
 
 	// Read the secrets file
-	data, err := os.ReadFile(*clientSecretsFile)
+	data, err := os.ReadFile(secretsFile)
 	if err != nil {
 		// fallback to reading from OS specific default config dir
 		if errors.Is(err, fs.ErrNotExist) {
@@ -111,7 +111,7 @@ func readConfig(scopes []string) (*oauth2.Config, error) {
 			}
 		} else {
 			pwd, _ := os.Getwd()
-			fullPath := filepath.Join(pwd, *clientSecretsFile)
+			fullPath := filepath.Join(pwd, secretsFile)
 			return nil, fmt.Errorf(missingClientSecretsMessage, fullPath)
 		}
 	}
@@ -157,10 +157,6 @@ func readConfig(scopes []string) (*oauth2.Config, error) {
 // startCallbackWebServer starts a web server that listens on http://localhost:8080.
 // The webserver waits for an oauth code in the three-legged auth flow.
 func startCallbackWebServer(ctx context.Context, oAuthPort int) (callbackCh chan CallbackStatus, err error) {
-
-	quitChan := make(chan struct{})
-	defer close(quitChan)
-
 	var srv http.Server
 
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", oAuthPort))
@@ -187,7 +183,8 @@ func startCallbackWebServer(ctx context.Context, oAuthPort int) (callbackCh chan
 		}
 	})
 
-	callbackCh = make(chan CallbackStatus)
+	callbackCh = make(chan CallbackStatus, 1)
+	serverDone := make(chan struct{})
 
 	// shutdown server on context timeout
 	go func() {
@@ -200,15 +197,15 @@ func startCallbackWebServer(ctx context.Context, oAuthPort int) (callbackCh chan
 			if err != nil {
 				log.Printf("Callback server shutdown error: %s\n", err)
 			}
-		case <-quitChan:
+		case <-serverDone:
 			return
 		}
 	}()
 
 	go func() {
+		defer close(serverDone)
 		defer close(callbackCh)
-		//if err := srv.ListenAndServe(); err != http.ErrServerClosed {
-		if err := srv.Serve(listener); err != nil {
+		if err := srv.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Printf("callback server error: %s", err)
 		}
 	}()
@@ -249,31 +246,27 @@ func (s *cachingTokenSource) Token() (*oauth2.Token, error) {
 // It returns an instance of an HTTP client that can be passed to the
 // constructor of the YouTube client.
 func BuildOAuthHTTPClient(ctx context.Context, scopes []string, oAuthPort int) (*http.Client, error) {
-	config, err := readConfig(scopes)
+	return BuildOAuthHTTPClientWithFiles(ctx, scopes, oAuthPort, *clientSecretsFile, *cache)
+}
+
+// BuildOAuthHTTPClientWithFiles takes the user through the three-legged OAuth flow using explicit
+// client secrets and token cache file paths.
+func BuildOAuthHTTPClientWithFiles(ctx context.Context, scopes []string, oAuthPort int, secretsFile string, cacheFile string) (*http.Client, error) {
+	config, err := readConfig(scopes, secretsFile)
 	if err != nil {
 		msg := fmt.Sprintf("Cannot read configuration file: %v", err)
 		return nil, errors.New(msg)
 	}
 
-	// Check if supplied token cache file exists
-	// fallback to reading from OS specific default config dir
-	_, err = os.Stat(*cache)
-	if err != nil && errors.Is(err, fs.ErrNotExist) {
-		confDir, err := os.UserConfigDir()
-		if err != nil {
-			return nil, err
-		}
-		cachePath := filepath.Join(confDir, "youtubeuploader", "request.token")
-		_, err = os.Stat(cachePath)
-		if err == nil {
-			*cache = cachePath
-		}
+	tokenCachePath, err := resolveTokenCachePath(cacheFile)
+	if err != nil {
+		return nil, err
 	}
 
 	// Try to read the token from the cache file.
 	// If an error occurs, do the three-legged OAuth flow because
 	// the token is invalid or doesn't exist.
-	tokenCache := CacheFile(*cache)
+	tokenCache := CacheFile(tokenCachePath)
 	token, err := tokenCache.Token()
 	if err == nil {
 		// Validate the token by attempting a refresh if it's expired
@@ -333,7 +326,7 @@ func BuildOAuthHTTPClient(ctx context.Context, scopes []string, oAuthPort int) (
 		return nil, fmt.Errorf("expecting state %q, received state %q", randState, cbs.state)
 	}
 
-	token, err = config.Exchange(context.TODO(), cbs.code)
+	token, err = config.Exchange(ctx, cbs.code)
 	if err != nil {
 		return nil, err
 	}
@@ -348,6 +341,28 @@ func BuildOAuthHTTPClient(ctx context.Context, scopes []string, oAuthPort int) (
 		lastToken: token,
 	}
 	return oauth2.NewClient(ctx, src), nil
+}
+
+func resolveTokenCachePath(cachePath string) (string, error) {
+	_, err := os.Stat(cachePath)
+	if err == nil {
+		return cachePath, nil
+	}
+	if !errors.Is(err, fs.ErrNotExist) {
+		return "", err
+	}
+
+	confDir, err := os.UserConfigDir()
+	if err != nil {
+		return "", err
+	}
+	defaultPath := filepath.Join(confDir, "youtubeuploader", "request.token")
+	if _, err := os.Stat(defaultPath); err == nil {
+		return defaultPath, nil
+	} else if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return "", err
+	}
+	return cachePath, nil
 }
 
 // Token retreives the token from the token cache
