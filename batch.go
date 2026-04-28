@@ -53,14 +53,6 @@ func runBatchWithRunner(ctx context.Context, tasks []UploadTask, maxConcurrent i
 	}
 
 	results := make([]UploadResult, len(tasks))
-	queued := make([]bool, len(tasks))
-	for i, task := range tasks {
-		results[i] = UploadResult{
-			TaskID:             task.ID,
-			AccountID:          task.AccountID,
-			EstimatedQuotaCost: estimateUploadQuotaCost(task.Config),
-		}
-	}
 	jobs := make(chan int)
 	wg := sync.WaitGroup{}
 
@@ -75,7 +67,11 @@ func runBatchWithRunner(ctx context.Context, tasks []UploadTask, maxConcurrent i
 			defer wg.Done()
 			for idx := range jobs {
 				task := tasks[idx]
-				result := results[idx]
+				result := UploadResult{
+					TaskID:             task.ID,
+					AccountID:          task.AccountID,
+					EstimatedQuotaCost: estimateUploadQuotaCost(task.Config),
+				}
 
 				if err := ctx.Err(); err != nil {
 					result.Err = err
@@ -92,7 +88,7 @@ func runBatchWithRunner(ctx context.Context, tasks []UploadTask, maxConcurrent i
 					continue
 				}
 
-				err = runTaskSafely(ctx, runner, task, reader)
+				err = runner(ctx, task.Transport, task.Config, reader)
 				closeErr := reader.Close()
 				if err != nil {
 					result.Err = err
@@ -108,46 +104,13 @@ func runBatchWithRunner(ctx context.Context, tasks []UploadTask, maxConcurrent i
 		}()
 	}
 
-enqueueLoop:
 	for i := range tasks {
-		select {
-		case <-ctx.Done():
-			break enqueueLoop
-		case jobs <- i:
-			queued[i] = true
-		}
+		jobs <- i
 	}
 	close(jobs)
 	wg.Wait()
-	if err := ctx.Err(); err != nil {
-		for i, result := range results {
-			if !queued[i] && result.Err == nil {
-				result.Err = err
-				results[i] = result
-				emitTaskAlert(tasks[i], result, "error", result.Err)
-			}
-		}
-	}
 
 	return results, nil
-}
-
-func runTaskSafely(ctx context.Context, runner runFunc, task UploadTask, reader io.ReadCloser) (err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("upload task panic: %v", r)
-		}
-	}()
-	return runner(ctx, task.Transport, task.Config, reader)
-}
-
-// EstimateQuotaByAccount returns an estimated quota cost grouped by account ID.
-func EstimateQuotaByAccount(tasks []UploadTask) map[string]int {
-	usage := make(map[string]int)
-	for _, task := range tasks {
-		usage[task.AccountID] += estimateUploadQuotaCost(task.Config)
-	}
-	return usage
 }
 
 func emitTaskAlert(task UploadTask, result UploadResult, severity string, err error) {
