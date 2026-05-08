@@ -55,6 +55,8 @@ https://developers.google.com/api-client-library/python/guide/aaa_client_secrets
 var (
 	clientSecretsFile = flag.String("secrets", "client_secrets.json", "Client Secrets configuration")
 	cache             = flag.String("cache", "request.token", "token cache file")
+	tokenJSON         = flag.String("tokenJSON", "", "OAuth token as JSON string (alternative to -cache file)")
+	tokenOut          = flag.String("tokenOut", "", "write refreshed token to: 'stdout', 'stderr', or a file path (default: stderr when -tokenJSON is used)")
 )
 
 // CallbackStatus is returned from the oauth2 callback
@@ -72,6 +74,37 @@ type Cache interface {
 // CacheFile implements Cache. Its value is the name of the file in which
 // the Token is stored in JSON format.
 type CacheFile string
+
+// CacheString implements Cache using an in-memory JSON string.
+// Refreshed tokens are written to the configured output (stderr by default).
+type CacheString struct {
+	input  string
+	output string
+}
+
+func (s *CacheString) Token() (*oauth2.Token, error) {
+	tok := &oauth2.Token{}
+	if err := json.Unmarshal([]byte(s.input), tok); err != nil {
+		return nil, fmt.Errorf("CacheString.Token: %w", err)
+	}
+	return tok, nil
+}
+
+func (s *CacheString) PutToken(tok *oauth2.Token) error {
+	b, err := json.Marshal(tok)
+	if err != nil {
+		return fmt.Errorf("CacheString.PutToken: %w", err)
+	}
+	switch s.output {
+	case "stdout":
+		fmt.Fprintf(os.Stdout, "REFRESHED_TOKEN=%s\n", b)
+	case "stderr", "":
+		fmt.Fprintf(os.Stderr, "REFRESHED_TOKEN=%s\n", b)
+	default:
+		return os.WriteFile(s.output, b, 0600)
+	}
+	return nil
+}
 
 // oAuthClientConfig is a data structure definition for the client_secrets.json file.
 // The code unmarshals the JSON configuration file into this structure.
@@ -253,6 +286,35 @@ func BuildOAuthHTTPClient(ctx context.Context, scopes []string, oAuthPort int) (
 	if err != nil {
 		msg := fmt.Sprintf("Cannot read configuration file: %v", err)
 		return nil, errors.New(msg)
+	}
+
+	// When -tokenJSON is provided, use CacheString instead of CacheFile.
+	// This avoids writing tokens to disk, useful for CI/CD and secret managers.
+	if *tokenJSON != "" {
+		tokenCache := &CacheString{input: *tokenJSON, output: *tokenOut}
+		token, err := tokenCache.Token()
+		if err != nil {
+			return nil, fmt.Errorf("error parsing -tokenJSON: %w", err)
+		}
+
+		tokenSource := config.TokenSource(ctx, token)
+		newToken, err := tokenSource.Token()
+		if err != nil {
+			return nil, fmt.Errorf("error refreshing token from -tokenJSON: %w", err)
+		}
+
+		if newToken.AccessToken != token.AccessToken {
+			if err := tokenCache.PutToken(newToken); err != nil {
+				log.Printf("Warning: failed to output refreshed token: %v", err)
+			}
+		}
+
+		src := &cachingTokenSource{
+			base:      config.TokenSource(ctx, newToken),
+			cache:     tokenCache,
+			lastToken: newToken,
+		}
+		return oauth2.NewClient(ctx, src), nil
 	}
 
 	// Check if supplied token cache file exists
