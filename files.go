@@ -41,6 +41,7 @@ const (
 
 type Config struct {
 	Filename          string
+	VideoID           string
 	Thumbnail         string
 	Caption           string
 	Title             string
