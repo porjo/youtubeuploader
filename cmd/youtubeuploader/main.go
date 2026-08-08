@@ -59,6 +59,7 @@ func main() {
 	flag.Var(&recordingDate, "recordingDate", "recording date e.g. 2024-11-23")
 
 	filename := flag.String("filename", "", "video filename. Can be a URL. Read from stdin with '-'")
+	videoID := flag.String("videoID", "", "existing video ID (for updating thumbnail only)")
 	thumbnail := flag.String("thumbnail", "", "thumbnail filename. Can be a URL")
 	caption := flag.String("caption", "", "caption filename. Can be a URL")
 	title := flag.String("title", "", "video title")
@@ -82,6 +83,7 @@ func main() {
 	flag.Parse()
 	config := yt.Config{
 		Filename:          *filename,
+		VideoID:           *videoID,
 		Thumbnail:         *thumbnail,
 		Caption:           *caption,
 		Title:             *title,
@@ -119,14 +121,34 @@ func main() {
 		os.Exit(0)
 	}
 
+	slog.Debug("youtubeuploader version", "version", appVersion)
+
+	if config.VideoID != "" {
+		if config.Filename != "" {
+			fmt.Println("Error: cannot use -videoID with -filename")
+			os.Exit(1)
+		}
+		if config.Thumbnail == "" {
+			fmt.Println("Error: -thumbnail is required when using -videoID")
+			os.Exit(1)
+		}
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		err = yt.SetThumbnail(ctx, config)
+		if err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+
 	if config.Filename == "" {
 		fmt.Printf("\nYou must provide a filename of a video file to upload\n")
 		fmt.Printf("\nUsage:\n")
 		flag.PrintDefaults()
 		os.Exit(1)
 	}
-
-	slog.Debug("youtubeuploader version", "version", appVersion)
 
 	if config.Title == "" {
 		config.Title = strings.ReplaceAll(filepath.Base(config.Filename), filepath.Ext(config.Filename), "")
