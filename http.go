@@ -45,6 +45,9 @@ type VideoMeta struct {
 	// recording details
 	RecordingDate Date `json:"recordingDate,omitempty"`
 
+	// paid product placement details
+	HasPaidProductPlacement bool `json:"hasPaidProductPlacement,omitempty"`
+
 	PlaylistIDs    []string `json:"playlistIds,omitempty"`
 	PlaylistTitles []string `json:"playlistTitles,omitempty"`
 

@@ -113,7 +113,7 @@ func Run(ctx context.Context, transport *limiter.LimitTransport, config Config, 
 
 	option = googleapi.ChunkSize(config.Chunksize)
 
-	call := service.Videos.Insert([]string{"snippet", "status", "localizations", "recordingDetails"}, uploadVideo)
+	call := service.Videos.Insert([]string{"snippet", "status", "localizations", "recordingDetails", "paidProductPlacementDetails"}, uploadVideo)
 	if config.SendFileName && config.Filename != "-" {
 		filetitle := filepath.Base(config.Filename)
 		slog.Debug("adding file name to request", "file", filetitle)
