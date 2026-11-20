@@ -76,6 +76,7 @@ func LoadVideoMeta(config Config) (*VideoMeta, *youtube.Video, error) {
 	video.Snippet = &youtube.VideoSnippet{}
 	video.RecordingDetails = &youtube.VideoRecordingDetails{}
 	video.Status = &youtube.VideoStatus{}
+	video.PaidProductPlacementDetails = &youtube.VideoPaidProductPlacementDetails{}
 
 	// Force send some boolean values.
 	// Without this, defaults on the Youtube side are used which can have unexpected results.
@@ -143,6 +144,9 @@ func LoadVideoMeta(config Config) (*VideoMeta, *youtube.Video, error) {
 		}
 		if videoMeta.ContainsSyntheticMedia {
 			video.Status.ContainsSyntheticMedia = true
+		}
+		if videoMeta.HasPaidProductPlacement {
+			video.PaidProductPlacementDetails.HasPaidProductPlacement = true
 		}
 		if !videoMeta.PublishAt.IsZero() {
 			if video.Status.PrivacyStatus != "private" {
